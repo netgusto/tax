@@ -36,13 +36,11 @@ fn run_app() -> Result<(), ()> {
         .expect(format!("Something went wrong reading the file {:?}", str_file_path).as_str());
 
     if contents.trim().len() == 0 {
-        println!("🌳 All done");
         return Ok(());
     }
 
     match next_task(contents) {
         None => {
-            println!("🌳 All done");
             return Ok(());
         }
         Some(task) => println!("{}", task),
