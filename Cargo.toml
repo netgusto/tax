@@ -1,0 +1,12 @@
+[package]
+name = "tax"
+version = "0.1.0"
+authors = ["Jerome Schneider <jerome.schneider@algolia.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+regex = "1"
+lazy_static = "1.4.0"
+dirs = "3.0.1"
