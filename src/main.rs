@@ -5,6 +5,7 @@ extern crate dirs;
 use regex::Regex;
 use std::fs;
 use std::path::Path;
+use std::time::SystemTime;
 
 /*
 TODO:
@@ -56,9 +57,21 @@ fn next_task(contents: String) -> Option<String> {
         static ref RE: Regex = Regex::new(r"(?m)^\s*(?:-|\*)\s+\[\s\]\s+(.+?)$").unwrap();
     }
 
+    let mut tasks: Vec<String> = Vec::new();
+
     for cap in RE.captures_iter(contents.as_str()) {
-        return Some(format!("{}", String::from(&cap[1])));
+        tasks.push(format!("{}", String::from(&cap[1])));
     }
 
-    None
+    if tasks.len() == 0 {
+        return None;
+    }
+
+    let now = SystemTime::now();
+    let minutes = match now.duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(n) => n.as_secs() / 60,
+        Err(_) => 0,
+    };
+
+    Some(tasks[minutes as usize % tasks.len()].to_owned())
 }
