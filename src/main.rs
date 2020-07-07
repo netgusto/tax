@@ -3,37 +3,43 @@ extern crate lazy_static;
 extern crate dirs;
 
 use regex::Regex;
+use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::SystemTime;
-
-/*
-TODO:
-* zsh binding => fzf like interface to view and manage tasks (input, delete, mark as completed)
-* improve display of prompt line
-* tmux status bar compat?
-*/
 
 fn main() {
     std::process::exit(match run_app() {
         Ok(_) => 0,
         Err(err) => {
-            eprintln!("error: {:?}", err);
+            eprintln!("error: {}", err);
             1
         }
     });
 }
 
-fn run_app() -> Result<(), ()> {
-    let home = match dirs::home_dir() {
-        None => return Err(()),
-        Some(h) => h,
-    };
+fn run_app() -> Result<(), String> {
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 {
+        let cmd = args[1].as_str();
+        if cmd == "edit" {
+            return cmd_edit();
+        } else {
+            return Err(format!(
+                "Unknown command \"{}\"; the sole valid command is \"edit\"",
+                args[1]
+            ));
+        }
+    }
 
-    let file_path = home.join(Path::new("taxfile"));
-    let str_file_path = file_path.to_str().unwrap();
+    cmd_display()
+}
 
-    let contents = fs::read_to_string(str_file_path)
+fn cmd_display() -> Result<(), String> {
+    let str_file_path = get_file_path().unwrap();
+
+    let contents = fs::read_to_string(&str_file_path)
         .expect(format!("Something went wrong reading the file {:?}", str_file_path).as_str());
 
     if contents.trim().len() == 0 {
@@ -41,13 +47,51 @@ fn run_app() -> Result<(), ()> {
     }
 
     match next_task(contents) {
+        Some(task) => println!("{}", task),
         None => {
             return Ok(());
         }
-        Some(task) => println!("{}", task),
     }
 
     Ok(())
+}
+
+fn cmd_edit() -> Result<(), String> {
+    let str_file_path = get_file_path().unwrap();
+    let mut cmd = Command::new("sh");
+    cmd.arg("-c")
+        .arg(format!("/usr/bin/env \"$EDITOR\" \"{}\"", str_file_path));
+
+    if let Ok(mut child) = cmd.spawn() {
+        match child.wait() {
+            Ok(_) => (),
+            Err(_) => {
+                return Err(String::from("Could not run $EDITOR"));
+            }
+        }
+    } else {
+        return Err(String::from("Could not run $EDITOR"));
+    }
+
+    return Ok(());
+}
+
+fn home_dir() -> Result<PathBuf, String> {
+    match dirs::home_dir() {
+        None => return Err(String::from("Cannot find home dir")),
+        Some(h) => Ok(h),
+    }
+}
+
+fn get_file_path() -> Result<String, String> {
+    let home = match home_dir() {
+        Err(e) => {
+            return Err(e);
+        }
+        Ok(home) => home,
+    };
+    let file_path = home.join(Path::new("taxfile"));
+    return Ok(String::from(file_path.to_str().unwrap()));
 }
 
 fn next_task(contents: String) -> Option<String> {
@@ -73,5 +117,7 @@ fn next_task(contents: String) -> Option<String> {
         Err(_) => 0,
     };
 
+    // select task based on minute for
+    // stateless stable rotation of displayed tasks
     Some(tasks[minutes as usize % tasks.len()].to_owned())
 }
