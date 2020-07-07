@@ -28,7 +28,7 @@ export PS1='= $(tax)
 > '
 ```
 
-Ex:
+Ex on my prompt:
 
 ![](assets/prompt.png)
 
