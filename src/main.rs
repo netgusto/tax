@@ -39,14 +39,20 @@ fn run_app() -> Result<(), String> {
 fn cmd_display() -> Result<(), String> {
     let str_file_path = get_file_path().unwrap();
 
-    let contents = fs::read_to_string(&str_file_path)
-        .expect(format!("Something went wrong reading the file {:?}", str_file_path).as_str());
+    let contents_result = fs::read_to_string(&str_file_path);
+    if !contents_result.is_ok() {
+        // File does not exist
+        // Display nothing
+        return Ok(());
+    }
+
+    let contents = contents_result.unwrap();
 
     if contents.trim().len() == 0 {
         return Ok(());
     }
 
-    match next_task(contents) {
+    match pick_task(contents) {
         Some(task) => println!("{}", task),
         None => {
             return Ok(());
@@ -58,11 +64,20 @@ fn cmd_display() -> Result<(), String> {
 
 fn cmd_edit() -> Result<(), String> {
     let str_file_path = get_file_path().unwrap();
-    let mut cmd = Command::new("sh");
-    cmd.arg("-c")
-        .arg(format!("/usr/bin/env \"$EDITOR\" \"{}\"", str_file_path));
+    // let mut cmd = Command::new("sh");
+    // cmd.arg("-c")
+    //     .arg(format!("/usr/bin/env \"$EDITOR\" \"{}\"", str_file_path));
 
-    if let Ok(mut child) = cmd.spawn() {
+    let res = env::var("EDITOR");
+    if !res.is_ok() {
+        return Err(String::from(
+            "Please set $EDITOR in environment to use \"edit\".",
+        ));
+    }
+
+    let editor = res.unwrap();
+
+    if let Ok(mut child) = Command::new(editor).arg(str_file_path).spawn() {
         match child.wait() {
             Ok(_) => (),
             Err(_) => {
@@ -102,11 +117,11 @@ fn get_file_path() -> Result<String, String> {
     return Ok(file_path);
 }
 
-fn next_task(contents: String) -> Option<String> {
+fn pick_task(contents: String) -> Option<String> {
     // Find lines matching pattern
     // - [ ] Task name
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"(?m)^\s*(?:-|\*)\s+\[\s\]\s+(.+?)$").unwrap();
+        static ref RE: Regex = Regex::new(r"(?m)^\s*(?:-|\*)\s+\[\s*\]\s+(.+?)$").unwrap();
     }
 
     let mut tasks: Vec<String> = Vec::new();
