@@ -84,14 +84,22 @@ fn home_dir() -> Result<PathBuf, String> {
 }
 
 fn get_file_path() -> Result<String, String> {
-    let home = match home_dir() {
-        Err(e) => {
-            return Err(e);
-        }
-        Ok(home) => home,
-    };
-    let file_path = home.join(Path::new("taxfile"));
-    return Ok(String::from(file_path.to_str().unwrap()));
+    let file_path: String;
+
+    let res = env::var("TAXFILE");
+    if res.is_ok() {
+        file_path = res.unwrap();
+    } else {
+        let home = match home_dir() {
+            Err(e) => {
+                return Err(e);
+            }
+            Ok(home) => home,
+        };
+
+        file_path = String::from(home.join(Path::new("taxfile")).to_str().unwrap());
+    }
+    return Ok(file_path);
 }
 
 fn next_task(contents: String) -> Option<String> {
