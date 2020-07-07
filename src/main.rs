@@ -57,7 +57,7 @@ fn next_task(contents: String) -> Option<String> {
     }
 
     for cap in RE.captures_iter(contents.as_str()) {
-        return Some(format!("⏭️ {}", String::from(&cap[1])));
+        return Some(format!("{}", String::from(&cap[1])));
     }
 
     None
