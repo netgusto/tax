@@ -412,7 +412,7 @@ fn toggle_line_focus(line: String, focused: bool) -> String {
     )
     .unwrap();
 
-    return match re.captures(line.as_str()) {
+    match re.captures(line.as_str()) {
         None => line,
         Some(cap) => {
             let name = String::from(&cap[4]);
@@ -432,7 +432,7 @@ fn toggle_line_focus(line: String, focused: bool) -> String {
 
             format!("{}{}{}{}", &cap[1], &cap[2], &cap[3], replacement)
         }
-    };
+    }
 }
 
 fn get_current_task(
