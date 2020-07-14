@@ -11,10 +11,51 @@ use std::time::SystemTime;
 
 use std::io::{prelude::*, BufReader};
 
+mod tax;
+
+type EnvGetter = fn(&str) -> Option<String>;
+fn env_getter_real(name: &str) -> Option<String> {
+    match env::var(name) {
+        Ok(v) => Some(v),
+        Err(_) => None,
+    }
+}
+
+type HomeGetter = fn() -> Option<PathBuf>;
+fn home_getter_real() -> Option<PathBuf> {
+    match dirs::home_dir() {
+        None => return None,
+        Some(h) => Some(h),
+    }
+}
+
+trait TaxfilePathGetter {
+    fn get_taxfile_path(&self) -> Result<String, String>;
+}
+
+struct TaxfilePathGetterReal {
+    get_env: EnvGetter,
+    get_home: HomeGetter,
+}
+
+impl TaxfilePathGetter for TaxfilePathGetterReal {
+    fn get_taxfile_path(&self) -> Result<String, String> {
+        match (self.get_env)("TAXFILE") {
+            Some(v) => Ok(v),
+            None => match (self.get_home)() {
+                None => Err(String::from("Could not find home dir")),
+                Some(home) => Ok(String::from(
+                    home.join(Path::new("taxfile")).to_str().unwrap(),
+                )),
+            },
+        }
+    }
+}
+
 lazy_static! {
     static ref TASK_LINE_REGEX: Regex =
         Regex::new(r"(?m)^\s*(?:-|\*)\s+\[(x|\s*|>)\]\s+(.+?)$").unwrap();
-    static ref NAME_FOCUSED_REGEX: Regex = Regex::new(r"(?m)\*\*.+\*\*").unwrap();
+    static ref TASK_NAME_FOCUSED_REGEX: Regex = Regex::new(r"(?m)\*\*.+\*\*").unwrap();
 }
 
 #[derive(std::clone::Clone)]
@@ -27,52 +68,50 @@ pub struct Task {
     is_focused: bool,
 }
 
-fn main() {
-    std::process::exit(match run_app() {
-        Ok(_) => 0,
-        Err(err) => {
-            eprintln!("error: {}", err);
-            1
-        }
-    });
+fn main() -> Result<(), String> {
+    run_app(env::args().collect())
 }
 
-fn run_app() -> Result<(), String> {
-    let args: Vec<String> = env::args().collect();
+fn run_app(args: Vec<String>) -> Result<(), String> {
     let cmd: Option<&str> = if args.len() > 1 {
         Some(args[1].as_str())
     } else {
         None
     };
 
+    let taxfile_path_getter_real = &TaxfilePathGetterReal {
+        get_env: env_getter_real,
+        get_home: home_getter_real,
+    };
+
     match cmd {
-        Some("edit") => cmd_edit(),
+        Some("edit") => cmd_edit(taxfile_path_getter_real),
 
-        Some("focus") => cmd_focus(args, true),
-        Some("blur") => cmd_focus(args, false),
+        Some("focus") => cmd_focus(taxfile_path_getter_real, args, true),
+        Some("blur") => cmd_focus(taxfile_path_getter_real, args, false),
 
-        Some("check") => cmd_check(args, true),
-        Some("uncheck") => cmd_check(args, false),
+        Some("check") => cmd_check(taxfile_path_getter_real, args, true),
+        Some("uncheck") => cmd_check(taxfile_path_getter_real, args, false),
 
-        Some("list") => cmd_list(),
-        Some("current") => cmd_current(false),
-        Some("cycle") => cmd_current(true),
+        Some("list") => cmd_list(taxfile_path_getter_real),
+        Some("current") => cmd_current(taxfile_path_getter_real, false),
+        Some("cycle") => cmd_current(taxfile_path_getter_real, true),
 
-        None => cmd_list(), // default: list
+        None => cmd_list(taxfile_path_getter_real), // default: list
         _ => Err(format!("Unknown command \"{}\"", cmd.unwrap())),
     }
 }
 
-fn cmd_current(cycle: bool) -> Result<(), String> {
-    match current_task(cycle) {
+fn cmd_current(taxfile_path_getter: &dyn TaxfilePathGetter, cycle: bool) -> Result<(), String> {
+    match get_current_task(taxfile_path_getter, cycle) {
         Ok(Some(task)) => println!("[{}] {}", task.num, task.name),
         _ => (),
     };
     Ok(())
 }
 
-fn cmd_edit() -> Result<(), String> {
-    let str_file_path = get_file_path().unwrap();
+fn cmd_edit(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<(), String> {
+    let str_file_path = taxfile_path_getter.get_taxfile_path().unwrap();
 
     let res = env::var("EDITOR");
     if !res.is_ok() {
@@ -97,8 +136,8 @@ fn cmd_edit() -> Result<(), String> {
     Ok(())
 }
 
-fn cmd_list() -> Result<(), String> {
-    let tasks = open_tasks()?;
+fn cmd_list(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<(), String> {
+    let tasks = get_open_tasks(taxfile_path_getter)?;
     for task in tasks {
         println!("[{}] {}", task.num, task.name)
     }
@@ -106,13 +145,17 @@ fn cmd_list() -> Result<(), String> {
     Ok(())
 }
 
-fn cmd_focus(args: Vec<String>, focus: bool) -> Result<(), String> {
+fn cmd_focus(
+    taxfile_path_getter: &dyn TaxfilePathGetter,
+    args: Vec<String>,
+    focus: bool,
+) -> Result<(), String> {
     let rank_one_based = match get_cmd_rank_arg(args)? {
-        None => return cmd_list(),
+        None => return cmd_list(taxfile_path_getter),
         Some(rank) => rank,
     };
 
-    let tasks = all_tasks()?;
+    let tasks = get_all_tasks(taxfile_path_getter)?;
     if rank_one_based > tasks.len() {
         return Err(format!("Non existent task {}", rank_one_based));
     }
@@ -136,16 +179,20 @@ fn cmd_focus(args: Vec<String>, focus: bool) -> Result<(), String> {
     let action = if focus { "Focused" } else { "Blurred" };
     println!("{}: [{}] {}", action, task.num, task.name);
 
-    replace_line_in_file(task.line_num, replacement_line)
+    replace_line_in_file(taxfile_path_getter, task.line_num, replacement_line)
 }
 
-fn cmd_check(args: Vec<String>, completed: bool) -> Result<(), String> {
+fn cmd_check(
+    taxfile_path_getter: &dyn TaxfilePathGetter,
+    args: Vec<String>,
+    completed: bool,
+) -> Result<(), String> {
     let rank_one_based = match get_cmd_rank_arg(args)? {
-        None => return cmd_list(),
+        None => return cmd_list(taxfile_path_getter),
         Some(rank) => rank,
     };
 
-    let tasks = all_tasks()?;
+    let tasks = get_all_tasks(taxfile_path_getter)?;
     if rank_one_based > tasks.len() {
         return Err(format!("Non existent task {}", rank_one_based));
     }
@@ -164,7 +211,7 @@ fn cmd_check(args: Vec<String>, completed: bool) -> Result<(), String> {
     let action = if completed { "Checked" } else { "Unchecked" };
     println!("{}: [{}] {}", action, task.num, task.name);
 
-    replace_line_in_file(task.line_num, checked_line)
+    replace_line_in_file(taxfile_path_getter, task.line_num, checked_line)
 }
 
 fn get_cmd_rank_arg(args: Vec<String>) -> Result<Option<usize>, String> {
@@ -180,57 +227,9 @@ fn get_cmd_rank_arg(args: Vec<String>) -> Result<Option<usize>, String> {
     return Ok(Some(rank_one_based));
 }
 
-fn home_dir() -> Result<PathBuf, String> {
-    match dirs::home_dir() {
-        None => return Err(String::from("Cannot find home dir")),
-        Some(h) => Ok(h),
-    }
-}
-
-fn get_file_path() -> Result<String, String> {
-    let file_path: String;
-
-    let res = env::var("TAXFILE");
-    if res.is_ok() {
-        file_path = res.unwrap();
-    } else {
-        let home = match home_dir() {
-            Err(e) => {
-                return Err(e);
-            }
-            Ok(home) => home,
-        };
-
-        file_path = String::from(home.join(Path::new("taxfile")).to_str().unwrap());
-    }
-
-    Ok(file_path)
-}
-
-fn pick_task(tasks: Vec<Task>, rotate: bool) -> Option<Task> {
-    if tasks.len() == 0 {
-        return None;
-    }
-
-    if rotate {
-        let now = SystemTime::now();
-        let minutes = match now.duration_since(SystemTime::UNIX_EPOCH) {
-            Ok(n) => n.as_secs() / 60,
-            Err(_) => 0,
-        };
-
-        // select task based on minute for
-        // stateless stable rotation of displayed tasks
-        return Some(tasks[minutes as usize % tasks.len()].clone());
-    }
-
-    Some(tasks[0].clone())
-}
-
-fn all_tasks() -> Result<Vec<Task>, String> {
+fn get_all_tasks(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<Vec<Task>, String> {
     let mut tasks: Vec<Task> = Vec::new();
-
-    let str_file_path = get_file_path()?;
+    let str_file_path = taxfile_path_getter.get_taxfile_path()?;
 
     let file_result = File::open(str_file_path);
     if !file_result.is_ok() {
@@ -249,11 +248,11 @@ fn all_tasks() -> Result<Vec<Task>, String> {
                 let check_symbol = cap[1].trim();
                 let name = String::from(&cap[2]);
 
-                let is_focused = name.len() > 4 && NAME_FOCUSED_REGEX.is_match(&name);
+                let is_focused = name.len() > 4 && TASK_NAME_FOCUSED_REGEX.is_match(&name);
                 tasks.push(Task {
                     name: name,
                     num: task_num,
-                    is_completed: check_symbol == "x",
+                    is_completed: is_check_symbol(check_symbol),
                     line_num: line_num,
                     line: String::from(&cap[0]),
                     is_focused: is_focused,
@@ -269,15 +268,15 @@ fn all_tasks() -> Result<Vec<Task>, String> {
     Ok(tasks)
 }
 
-fn open_tasks() -> Result<Vec<Task>, String> {
-    Ok(all_tasks()?
+fn get_open_tasks(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<Vec<Task>, String> {
+    Ok(get_all_tasks(taxfile_path_getter)?
         .into_iter()
         .filter(|task| !task.is_completed)
         .collect())
 }
 
-fn doing_tasks() -> Result<Vec<Task>, String> {
-    Ok(open_tasks()?
+fn get_focused_tasks(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<Vec<Task>, String> {
+    Ok(get_open_tasks(taxfile_path_getter)?
         .into_iter()
         .filter(|task| task.is_focused)
         .collect())
@@ -332,7 +331,7 @@ fn toggle_line_focus(line: String, focused: bool) -> String {
         Some(cap) => {
             let name = String::from(&cap[4]);
 
-            let is_focused = NAME_FOCUSED_REGEX.is_match(&name);
+            let is_focused = TASK_NAME_FOCUSED_REGEX.is_match(&name);
             if is_focused && focused {
                 return line;
             } else if !is_focused && !focused {
@@ -350,25 +349,41 @@ fn toggle_line_focus(line: String, focused: bool) -> String {
     };
 }
 
-fn current_task(cycle: bool) -> Result<Option<Task>, String> {
-    let tasks_result = open_tasks();
-    if !tasks_result.is_ok() {
-        // display nothing
+fn get_current_task(
+    taxfile_path_getter: &dyn TaxfilePathGetter,
+    cycle: bool,
+) -> Result<Option<Task>, String> {
+    let focused_tasks = get_focused_tasks(taxfile_path_getter)?;
+    if focused_tasks.len() > 0 {
+        return Ok(Some(focused_tasks[0].clone()));
+    }
+
+    let tasks = get_open_tasks(taxfile_path_getter)?;
+    if tasks.len() == 0 {
         return Ok(None);
     }
-    let doing = doing_tasks()?;
-    if doing.len() > 0 {
-        return Ok(Some(doing[0].clone()));
+
+    if cycle {
+        let now = SystemTime::now();
+        let minutes = match now.duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(n) => n.as_secs() / 60,
+            Err(_) => 0,
+        };
+
+        // select task based on minute for
+        // stateless stable rotation of displayed tasks
+        return Ok(Some(tasks[minutes as usize % tasks.len()].clone()));
     }
 
-    match pick_task(tasks_result.unwrap(), cycle) {
-        Some(task) => Ok(Some(task)),
-        None => Ok(None),
-    }
+    Ok(Some(tasks[0].clone()))
 }
 
-fn replace_line_in_file(replace_line_num: usize, replacement_line: String) -> Result<(), String> {
-    let str_file_path = get_file_path()?;
+fn replace_line_in_file(
+    taxfile_path_getter: &dyn TaxfilePathGetter,
+    replace_line_num: usize,
+    replacement_line: String,
+) -> Result<(), String> {
+    let str_file_path = taxfile_path_getter.get_taxfile_path()?;
 
     let file_result = File::open(&str_file_path);
     if !file_result.is_ok() {
@@ -394,4 +409,58 @@ fn replace_line_in_file(replace_line_num: usize, replacement_line: String) -> Re
     fs::write(str_file_path, content).expect("Unable to write file");
 
     Ok(())
+}
+
+fn is_check_symbol(s: &str) -> bool {
+    return s == "x";
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn env_getter_none(_: &str) -> Option<String> {
+        return None;
+    }
+
+    fn home_getter_guybrush() -> Option<PathBuf> {
+        return Some(PathBuf::from("/home/guybrush"));
+    }
+
+    fn env_getter_taxfile(name: &str) -> Option<String> {
+        match name {
+            "TAXFILE" => Some("/path/to/overriden/taxfile".to_string()),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn test_is_check_symbol() {
+        assert_eq!(is_check_symbol(""), false);
+        assert_eq!(is_check_symbol("*"), false);
+        assert_eq!(is_check_symbol("x"), true);
+        assert_eq!(is_check_symbol("X"), false);
+    }
+
+    #[test]
+    fn test_taxfile_path_getter_real() {
+        let path_getter_noenv = &TaxfilePathGetterReal {
+            get_env: env_getter_none,
+            get_home: home_getter_guybrush,
+        };
+        assert_eq!(
+            path_getter_noenv.get_taxfile_path(),
+            Ok(String::from("/home/guybrush/taxfile"))
+        );
+
+        let path_getter_yesenv = &TaxfilePathGetterReal {
+            get_env: env_getter_taxfile,
+            get_home: home_getter_guybrush,
+        };
+
+        assert_eq!(
+            path_getter_yesenv.get_taxfile_path(),
+            Ok(String::from("/path/to/overriden/taxfile"))
+        );
+    }
 }
