@@ -50,7 +50,7 @@ impl TaxfilePathGetter for TaxfilePathGetterReal {
     }
 }
 
-struct FileReaderReal {
+struct ContentHandlerReal {
     path: String,
 }
 
@@ -58,7 +58,7 @@ trait ContentGetter {
     fn get_contents(&self) -> Result<Vec<String>, String>;
 }
 
-impl ContentGetter for FileReaderReal {
+impl ContentGetter for ContentHandlerReal {
     fn get_contents(&self) -> Result<Vec<String>, String> {
         match File::open(&self.path) {
             Err(_) => Err(format!("Could not open file {}", &self.path)),
@@ -71,6 +71,30 @@ impl ContentGetter for FileReaderReal {
                 }
             }
         }
+    }
+}
+
+trait ContentSetter {
+    fn set_contents(&self, contents: String) -> Result<(), String>;
+}
+
+impl ContentSetter for ContentHandlerReal {
+    fn set_contents(&self, contents: String) -> Result<(), String> {
+        match fs::write(&self.path, contents) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(String::from("Unable to write file")),
+        }
+    }
+}
+
+trait StringOutputer {
+    fn info(&mut self, s: String) -> ();
+}
+
+struct StringOutputerReal {}
+impl StringOutputer for StringOutputerReal {
+    fn info(&mut self, s: String) -> () {
+        println!("{}", s);
     }
 }
 
@@ -107,29 +131,59 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
     };
 
     let file_path = taxfile_path_getter_real.get_taxfile_path()?;
-    let content_getter_real = &FileReaderReal { path: file_path };
+    let content_handler_real = &ContentHandlerReal { path: file_path };
+
+    let outputer = &mut StringOutputerReal {};
 
     match cmd {
         Some("edit") => cmd_edit(taxfile_path_getter_real),
 
-        Some("focus") => cmd_focus(taxfile_path_getter_real, content_getter_real, args, true),
-        Some("blur") => cmd_focus(taxfile_path_getter_real, content_getter_real, args, false),
+        Some("focus") => cmd_focus(
+            outputer,
+            content_handler_real,
+            content_handler_real,
+            args,
+            true,
+        ),
+        Some("blur") => cmd_focus(
+            outputer,
+            content_handler_real,
+            content_handler_real,
+            args,
+            false,
+        ),
 
-        Some("check") => cmd_check(taxfile_path_getter_real, content_getter_real, args, true),
-        Some("uncheck") => cmd_check(taxfile_path_getter_real, content_getter_real, args, false),
+        Some("check") => cmd_check(
+            outputer,
+            content_handler_real,
+            content_handler_real,
+            args,
+            true,
+        ),
+        Some("uncheck") => cmd_check(
+            outputer,
+            content_handler_real,
+            content_handler_real,
+            args,
+            false,
+        ),
 
-        Some("list") => cmd_list(content_getter_real),
-        Some("current") => cmd_current(content_getter_real, false),
-        Some("cycle") => cmd_current(content_getter_real, true),
+        Some("list") => cmd_list(outputer, content_handler_real),
+        Some("current") => cmd_current(outputer, content_handler_real, false),
+        Some("cycle") => cmd_current(outputer, content_handler_real, true),
 
-        None => cmd_list(content_getter_real), // default: list
+        None => cmd_list(outputer, content_handler_real), // default: list
         _ => Err(format!("Unknown command \"{}\"", cmd.unwrap())),
     }
 }
 
-fn cmd_current(content_getter: &dyn ContentGetter, cycle: bool) -> Result<(), String> {
+fn cmd_current(
+    outputer: &mut dyn StringOutputer,
+    content_getter: &dyn ContentGetter,
+    cycle: bool,
+) -> Result<(), String> {
     match get_current_task(content_getter, cycle) {
-        Ok(Some(task)) => println!("[{}] {}", task.num, task.name),
+        Ok(Some(task)) => outputer.info(format!("[{}] {}", task.num, task.name)),
         _ => (),
     };
     Ok(())
@@ -161,23 +215,27 @@ fn cmd_edit(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<(), String> {
     Ok(())
 }
 
-fn cmd_list(content_getter: &dyn ContentGetter) -> Result<(), String> {
+fn cmd_list(
+    outputer: &mut dyn StringOutputer,
+    content_getter: &dyn ContentGetter,
+) -> Result<(), String> {
     let tasks = get_open_tasks(content_getter)?;
     for task in tasks {
-        println!("[{}] {}", task.num, task.name)
+        outputer.info(format!("[{}] {}", task.num, task.name))
     }
 
     Ok(())
 }
 
 fn cmd_focus(
-    taxfile_path_getter: &dyn TaxfilePathGetter,
+    outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
+    content_setter: &dyn ContentSetter,
     args: Vec<String>,
     focus: bool,
 ) -> Result<(), String> {
     let rank_one_based = match get_cmd_rank_arg(args)? {
-        None => return cmd_list(content_getter),
+        None => return cmd_list(outputer, content_getter),
         Some(rank) => rank,
     };
 
@@ -189,33 +247,40 @@ fn cmd_focus(
     let task = &tasks[rank_one_based - 1];
 
     if task.is_completed {
-        println!("Completed, cannot proceed: [{}] {}", task.num, task.name);
+        outputer.info(format!(
+            "Completed, cannot proceed: [{}] {}",
+            task.num, task.name
+        ));
         return Ok(());
     }
 
     if focus && task.is_focused {
-        println!("Already focused: [{}] {}", task.num, task.name);
+        outputer.info(format!("Already focused: [{}] {}", task.num, task.name));
         return Ok(());
     } else if !focus && !task.is_focused {
-        println!("Already blured: [{}] {}", task.num, task.name);
+        outputer.info(format!("Already blured: [{}] {}", task.num, task.name));
         return Ok(());
     }
 
     let replacement_line = toggle_line_focus(task.line.clone(), focus);
     let action = if focus { "Focused" } else { "Blurred" };
-    println!("{}: [{}] {}", action, task.num, task.name);
+    outputer.info(format!("{}: [{}] {}", action, task.num, task.name));
 
-    replace_line_in_file(taxfile_path_getter, task.line_num, replacement_line)
+    let replaced_content =
+        replace_line_in_contents(content_getter, task.line_num, replacement_line)?;
+
+    content_setter.set_contents(replaced_content)
 }
 
 fn cmd_check(
-    taxfile_path_getter: &dyn TaxfilePathGetter,
+    outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
+    content_setter: &dyn ContentSetter,
     args: Vec<String>,
     completed: bool,
 ) -> Result<(), String> {
     let rank_one_based = match get_cmd_rank_arg(args)? {
-        None => return cmd_list(content_getter),
+        None => return cmd_list(outputer, content_getter),
         Some(rank) => rank,
     };
 
@@ -227,18 +292,20 @@ fn cmd_check(
     let task = &tasks[rank_one_based - 1];
 
     if completed && task.is_completed {
-        println!("Already checked: [{}] {}", task.num, task.name);
+        outputer.info(format!("Already checked: [{}] {}", task.num, task.name));
         return Ok(());
     } else if !completed && !task.is_completed {
-        println!("Already unckecked: [{}] {}", task.num, task.name);
+        outputer.info(format!("Already unckecked: [{}] {}", task.num, task.name));
         return Ok(());
     }
 
     let checked_line = toggle_line_completion(task.line.clone(), completed);
     let action = if completed { "Checked" } else { "Unchecked" };
-    println!("{}: [{}] {}", action, task.num, task.name);
+    outputer.info(format!("{}: [{}] {}", action, task.num, task.name));
 
-    replace_line_in_file(taxfile_path_getter, task.line_num, checked_line)
+    let replaced_content = replace_line_in_contents(content_getter, task.line_num, checked_line)?;
+
+    content_setter.set_contents(replaced_content)
 }
 
 fn get_cmd_rank_arg(args: Vec<String>) -> Result<Option<usize>, String> {
@@ -397,37 +464,26 @@ fn get_current_task(
     Ok(Some(tasks[0].clone()))
 }
 
-fn replace_line_in_file(
-    taxfile_path_getter: &dyn TaxfilePathGetter,
+fn replace_line_in_contents(
+    content_getter: &dyn ContentGetter,
     replace_line_num: usize,
     replacement_line: String,
-) -> Result<(), String> {
-    let str_file_path = taxfile_path_getter.get_taxfile_path()?;
-
-    let file_result = File::open(&str_file_path);
-    if !file_result.is_ok() {
-        return Err(String::from("Cannot open taxfile"));
-    }
-    let reader = BufReader::new(file_result.unwrap());
-
+) -> Result<String, String> {
     let mut line_num = 1;
 
     let mut content = String::from("");
 
-    for line_result in reader.lines() {
+    for line in content_getter.get_contents()? {
         if line_num == replace_line_num {
             content += format!("{}\n", replacement_line).as_str();
         } else {
-            let line = line_result.unwrap();
             content += format!("{}\n", line).as_str();
         }
 
         line_num += 1;
     }
 
-    fs::write(str_file_path, content).expect("Unable to write file");
-
-    Ok(())
+    Ok(content)
 }
 
 fn is_check_symbol(s: &str) -> bool {
@@ -459,6 +515,23 @@ mod tests {
     impl ContentGetter for FileReaderMock {
         fn get_contents(&self) -> Result<Vec<String>, String> {
             self.outcome.clone()
+        }
+    }
+
+    struct StringOutputerMock {
+        info_buf: Vec<String>,
+    }
+    impl StringOutputerMock {
+        fn new() -> Self {
+            return StringOutputerMock { info_buf: vec![] };
+        }
+        fn get_info(&self) -> String {
+            self.info_buf.join("\n")
+        }
+    }
+    impl StringOutputer for StringOutputerMock {
+        fn info(&mut self, s: String) -> () {
+            self.info_buf.push(String::from(format!("{}\n", s)));
         }
     }
 
@@ -567,12 +640,6 @@ mod tests {
             toggle_line_completion(String::from("- [x] **This is a task**"), false),
             String::from("- [ ] **This is a task**")
         );
-    }
-
-    lazy_static! {
-        static ref TASK_LINE_REGEX: Regex =
-            Regex::new(r"(?m)^\s*(?:-|\*)\s+\[(x|\s*|>)\]\s+(.+?)$").unwrap();
-        static ref TASK_NAME_FOCUSED_REGEX: Regex = Regex::new(r"(?m)\*\*.+\*\*").unwrap();
     }
 
     fn get_std_test_contents() -> (Vec<String>, Vec<Task>) {
@@ -708,6 +775,63 @@ mod tests {
         }) {
             Ok(tasks) => assert_eq!(tasks, vec![expected_tasks[2].clone()]),
             Err(e) => panic!(e),
+        }
+    }
+
+    #[test]
+    fn test_get_current_task() {
+        // Empty contents
+        match get_current_task(
+            &FileReaderMock {
+                outcome: Ok(Vec::new()),
+            },
+            false,
+        ) {
+            Ok(task) => assert_eq!(task, None),
+            Err(e) => panic!(e),
+        }
+
+        // Std contents
+        let (test_contents, expected_tasks) = get_std_test_contents();
+
+        match get_current_task(
+            &FileReaderMock {
+                outcome: Ok(test_contents),
+            },
+            false,
+        ) {
+            Ok(task) => assert_eq!(task, Some(expected_tasks[2].clone())),
+            Err(e) => panic!(e),
+        }
+    }
+
+    #[test]
+    fn test_cmd_current() {
+        // Empty contents
+        {
+            let outputer_mock = &mut StringOutputerMock::new();
+
+            let content_getter_mock = &FileReaderMock {
+                outcome: Ok(Vec::new()),
+            };
+
+            cmd_current(outputer_mock, content_getter_mock, false).unwrap();
+            assert_eq!(outputer_mock.get_info(), "");
+        }
+
+        // Std contents
+        {
+            let outputer_mock = &mut StringOutputerMock::new();
+            let (test_contents, _) = get_std_test_contents();
+            let content_getter_mock = &FileReaderMock {
+                outcome: Ok(test_contents),
+            };
+
+            cmd_current(outputer_mock, content_getter_mock, false).unwrap();
+            assert_eq!(
+                outputer_mock.get_info(),
+                "[3] **Standard unchecked focused**\n"
+            );
         }
     }
 }
