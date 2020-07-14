@@ -1,4 +1,4 @@
-# tax, the prompt task list
+# tax, the prompt task list [![CircleCI](https://circleci.com/gh/netgusto/tax.svg?style=svg)](https://circleci.com/gh/netgusto/tax)
 
 Displays the next pending task from `~/taxfile`, or from the content of the file pointed by `$TAXFILE` if set.
 
