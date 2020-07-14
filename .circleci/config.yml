@@ -8,8 +8,30 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Run tests
-          command: cargo test
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version
+      # - run:
+      #     name: Run tests
+      #     command: cargo test
+      # - run:
+      #     name: Build
+      #     command: cargo build --release
       - run:
-          name: Build
-          command: cargo build --release
+          name: Calculate dependencies
+          command: cargo generate-lockfile
+      - restore_cache:
+          keys:
+            - v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Build all targets
+          command: cargo build --all --all-targets
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+          key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Run all tests
+          command: cargo test --all
