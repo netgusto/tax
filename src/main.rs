@@ -327,7 +327,7 @@ fn toggle_line_focus(line: String, focused: bool) -> String {
     .unwrap();
 
     return match re.captures(line.as_str()) {
-        None => String::from("no1"),
+        None => line,
         Some(cap) => {
             let name = String::from(&cap[4]);
 
@@ -461,6 +461,83 @@ mod tests {
         assert_eq!(
             path_getter_yesenv.get_taxfile_path(),
             Ok(String::from("/path/to/overriden/taxfile"))
+        );
+    }
+
+    #[test]
+    fn test_line_focus() {
+        assert_eq!(
+            toggle_line_focus(String::from("This is not a task line"), true),
+            String::from("This is not a task line")
+        );
+
+        assert_eq!(
+            toggle_line_focus(String::from("* [] This is a task"), true),
+            String::from("* [] **This is a task**")
+        );
+
+        assert_eq!(
+            toggle_line_focus(String::from("- [ ] This is a task"), true),
+            String::from("- [ ] **This is a task**")
+        );
+
+        assert_eq!(
+            toggle_line_focus(String::from("- [x] **This is a task**"), true),
+            String::from("- [x] **This is a task**")
+        );
+    }
+
+    #[test]
+    fn test_line_blur() {
+        assert_eq!(
+            toggle_line_focus(String::from("This is not a task line"), false),
+            String::from("This is not a task line")
+        );
+
+        assert_eq!(
+            toggle_line_focus(String::from("* [] This is a task"), false),
+            String::from("* [] This is a task")
+        );
+
+        assert_eq!(
+            toggle_line_focus(String::from("- [x] **This is a task**"), false),
+            String::from("- [x] This is a task")
+        );
+    }
+
+    #[test]
+    fn test_line_check() {
+        assert_eq!(
+            toggle_line_completion(String::from("This is not a task line"), true),
+            String::from("This is not a task line")
+        );
+
+        assert_eq!(
+            toggle_line_completion(String::from("* [] This is a task"), true),
+            String::from("* [x] This is a task")
+        );
+
+        assert_eq!(
+            toggle_line_completion(String::from("- [ ] **This is a task**"), true),
+            String::from("- [x] **This is a task**")
+        );
+    }
+
+    #[test]
+    fn test_line_uncheck() {
+        assert_eq!(
+            toggle_line_completion(String::from("This is not a task line"), false),
+            String::from("This is not a task line")
+        );
+
+        assert_eq!(
+            toggle_line_completion(String::from("* [] This is a task"), false),
+            String::from("* [] This is a task")
+        );
+
+        assert_eq!(
+            toggle_line_completion(String::from("- [x] **This is a task**"), false),
+            String::from("- [ ] **This is a task**")
         );
     }
 }
