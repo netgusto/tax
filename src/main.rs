@@ -11,8 +11,6 @@ use std::time::SystemTime;
 
 use std::io::{prelude::*, BufReader};
 
-mod tax;
-
 type EnvGetter = fn(&str) -> Option<String>;
 fn env_getter_real(name: &str) -> Option<String> {
     match env::var(name) {
@@ -52,13 +50,37 @@ impl TaxfilePathGetter for TaxfilePathGetterReal {
     }
 }
 
+struct FileReaderReal {
+    path: String,
+}
+
+trait ContentGetter {
+    fn get_contents(&self) -> Result<Vec<String>, String>;
+}
+
+impl ContentGetter for FileReaderReal {
+    fn get_contents(&self) -> Result<Vec<String>, String> {
+        match File::open(&self.path) {
+            Err(_) => Err(format!("Could not open file {}", &self.path)),
+            Ok(f) => {
+                let reader = BufReader::new(f);
+                let lines_result = reader.lines().collect::<Result<_, _>>();
+                match lines_result {
+                    Err(_) => Err(format!("Could not read file {}", &self.path)),
+                    Ok(lines) => Ok(lines),
+                }
+            }
+        }
+    }
+}
+
 lazy_static! {
     static ref TASK_LINE_REGEX: Regex =
         Regex::new(r"(?m)^\s*(?:-|\*)\s+\[(x|\s*|>)\]\s+(.+?)$").unwrap();
     static ref TASK_NAME_FOCUSED_REGEX: Regex = Regex::new(r"(?m)\*\*.+\*\*").unwrap();
 }
 
-#[derive(std::clone::Clone)]
+#[derive(std::clone::Clone, Debug, PartialEq)]
 pub struct Task {
     num: usize,
     name: String,
@@ -84,26 +106,29 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
         get_home: home_getter_real,
     };
 
+    let file_path = taxfile_path_getter_real.get_taxfile_path()?;
+    let content_getter_real = &FileReaderReal { path: file_path };
+
     match cmd {
         Some("edit") => cmd_edit(taxfile_path_getter_real),
 
-        Some("focus") => cmd_focus(taxfile_path_getter_real, args, true),
-        Some("blur") => cmd_focus(taxfile_path_getter_real, args, false),
+        Some("focus") => cmd_focus(taxfile_path_getter_real, content_getter_real, args, true),
+        Some("blur") => cmd_focus(taxfile_path_getter_real, content_getter_real, args, false),
 
-        Some("check") => cmd_check(taxfile_path_getter_real, args, true),
-        Some("uncheck") => cmd_check(taxfile_path_getter_real, args, false),
+        Some("check") => cmd_check(taxfile_path_getter_real, content_getter_real, args, true),
+        Some("uncheck") => cmd_check(taxfile_path_getter_real, content_getter_real, args, false),
 
-        Some("list") => cmd_list(taxfile_path_getter_real),
-        Some("current") => cmd_current(taxfile_path_getter_real, false),
-        Some("cycle") => cmd_current(taxfile_path_getter_real, true),
+        Some("list") => cmd_list(content_getter_real),
+        Some("current") => cmd_current(content_getter_real, false),
+        Some("cycle") => cmd_current(content_getter_real, true),
 
-        None => cmd_list(taxfile_path_getter_real), // default: list
+        None => cmd_list(content_getter_real), // default: list
         _ => Err(format!("Unknown command \"{}\"", cmd.unwrap())),
     }
 }
 
-fn cmd_current(taxfile_path_getter: &dyn TaxfilePathGetter, cycle: bool) -> Result<(), String> {
-    match get_current_task(taxfile_path_getter, cycle) {
+fn cmd_current(content_getter: &dyn ContentGetter, cycle: bool) -> Result<(), String> {
+    match get_current_task(content_getter, cycle) {
         Ok(Some(task)) => println!("[{}] {}", task.num, task.name),
         _ => (),
     };
@@ -136,8 +161,8 @@ fn cmd_edit(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<(), String> {
     Ok(())
 }
 
-fn cmd_list(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<(), String> {
-    let tasks = get_open_tasks(taxfile_path_getter)?;
+fn cmd_list(content_getter: &dyn ContentGetter) -> Result<(), String> {
+    let tasks = get_open_tasks(content_getter)?;
     for task in tasks {
         println!("[{}] {}", task.num, task.name)
     }
@@ -147,15 +172,16 @@ fn cmd_list(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<(), String> {
 
 fn cmd_focus(
     taxfile_path_getter: &dyn TaxfilePathGetter,
+    content_getter: &dyn ContentGetter,
     args: Vec<String>,
     focus: bool,
 ) -> Result<(), String> {
     let rank_one_based = match get_cmd_rank_arg(args)? {
-        None => return cmd_list(taxfile_path_getter),
+        None => return cmd_list(content_getter),
         Some(rank) => rank,
     };
 
-    let tasks = get_all_tasks(taxfile_path_getter)?;
+    let tasks = get_all_tasks(content_getter)?;
     if rank_one_based > tasks.len() {
         return Err(format!("Non existent task {}", rank_one_based));
     }
@@ -184,15 +210,16 @@ fn cmd_focus(
 
 fn cmd_check(
     taxfile_path_getter: &dyn TaxfilePathGetter,
+    content_getter: &dyn ContentGetter,
     args: Vec<String>,
     completed: bool,
 ) -> Result<(), String> {
     let rank_one_based = match get_cmd_rank_arg(args)? {
-        None => return cmd_list(taxfile_path_getter),
+        None => return cmd_list(content_getter),
         Some(rank) => rank,
     };
 
-    let tasks = get_all_tasks(taxfile_path_getter)?;
+    let tasks = get_all_tasks(content_getter)?;
     if rank_one_based > tasks.len() {
         return Err(format!("Non existent task {}", rank_one_based));
     }
@@ -227,21 +254,13 @@ fn get_cmd_rank_arg(args: Vec<String>) -> Result<Option<usize>, String> {
     return Ok(Some(rank_one_based));
 }
 
-fn get_all_tasks(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<Vec<Task>, String> {
+fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
     let mut tasks: Vec<Task> = Vec::new();
-    let str_file_path = taxfile_path_getter.get_taxfile_path()?;
-
-    let file_result = File::open(str_file_path);
-    if !file_result.is_ok() {
-        return Err(String::from("Cannot open taxfile"));
-    }
-    let reader = BufReader::new(file_result.unwrap());
 
     let mut task_num = 1;
     let mut line_num = 1;
 
-    for line_result in reader.lines() {
-        let line = line_result.unwrap();
+    for line in content_getter.get_contents()? {
         match TASK_LINE_REGEX.captures(line.as_str()) {
             None => (),
             Some(cap) => {
@@ -268,15 +287,15 @@ fn get_all_tasks(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<Vec<Task
     Ok(tasks)
 }
 
-fn get_open_tasks(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<Vec<Task>, String> {
-    Ok(get_all_tasks(taxfile_path_getter)?
+fn get_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
+    Ok(get_all_tasks(content_getter)?
         .into_iter()
         .filter(|task| !task.is_completed)
         .collect())
 }
 
-fn get_focused_tasks(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<Vec<Task>, String> {
-    Ok(get_open_tasks(taxfile_path_getter)?
+fn get_focused_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
+    Ok(get_open_tasks(content_getter)?
         .into_iter()
         .filter(|task| task.is_focused)
         .collect())
@@ -350,15 +369,15 @@ fn toggle_line_focus(line: String, focused: bool) -> String {
 }
 
 fn get_current_task(
-    taxfile_path_getter: &dyn TaxfilePathGetter,
+    content_getter: &dyn ContentGetter,
     cycle: bool,
 ) -> Result<Option<Task>, String> {
-    let focused_tasks = get_focused_tasks(taxfile_path_getter)?;
+    let focused_tasks = get_focused_open_tasks(content_getter)?;
     if focused_tasks.len() > 0 {
         return Ok(Some(focused_tasks[0].clone()));
     }
 
-    let tasks = get_open_tasks(taxfile_path_getter)?;
+    let tasks = get_open_tasks(content_getter)?;
     if tasks.len() == 0 {
         return Ok(None);
     }
@@ -431,6 +450,15 @@ mod tests {
         match name {
             "TAXFILE" => Some("/path/to/overriden/taxfile".to_string()),
             _ => None,
+        }
+    }
+
+    struct FileReaderMock {
+        outcome: Result<Vec<String>, String>,
+    }
+    impl ContentGetter for FileReaderMock {
+        fn get_contents(&self) -> Result<Vec<String>, String> {
+            self.outcome.clone()
         }
     }
 
@@ -539,5 +567,147 @@ mod tests {
             toggle_line_completion(String::from("- [x] **This is a task**"), false),
             String::from("- [ ] **This is a task**")
         );
+    }
+
+    lazy_static! {
+        static ref TASK_LINE_REGEX: Regex =
+            Regex::new(r"(?m)^\s*(?:-|\*)\s+\[(x|\s*|>)\]\s+(.+?)$").unwrap();
+        static ref TASK_NAME_FOCUSED_REGEX: Regex = Regex::new(r"(?m)\*\*.+\*\*").unwrap();
+    }
+
+    fn get_std_test_contents() -> (Vec<String>, Vec<Task>) {
+        (
+            vec![
+                String::from("# Not a task"),
+                String::from("- [ ] Standard unchecked"),
+                String::from("- [] Collapsed unchecked"),
+                String::from("- [ ] **Standard unchecked focused**"),
+                String::from("* [ ] Star unchecked"),
+                String::from("Also not a task"),
+                String::from("- [x] Checked"),
+                String::from("- [x] **Focused checked**"),
+            ],
+            vec![
+                Task {
+                    num: 1,
+                    line_num: 2,
+                    line: String::from("- [ ] Standard unchecked"),
+                    name: String::from("Standard unchecked"),
+                    is_completed: false,
+                    is_focused: false,
+                },
+                Task {
+                    num: 2,
+                    line_num: 3,
+                    line: String::from("- [] Collapsed unchecked"),
+                    name: String::from("Collapsed unchecked"),
+                    is_completed: false,
+                    is_focused: false,
+                },
+                Task {
+                    num: 3,
+                    line_num: 4,
+                    line: String::from("- [ ] **Standard unchecked focused**"),
+                    name: String::from("**Standard unchecked focused**"),
+                    is_completed: false,
+                    is_focused: true,
+                },
+                Task {
+                    num: 4,
+                    line_num: 5,
+                    line: String::from("* [ ] Star unchecked"),
+                    name: String::from("Star unchecked"),
+                    is_completed: false,
+                    is_focused: false,
+                },
+                Task {
+                    num: 5,
+                    line_num: 7,
+                    line: String::from("- [x] Checked"),
+                    name: String::from("Checked"),
+                    is_completed: true,
+                    is_focused: false,
+                },
+                Task {
+                    num: 6,
+                    line_num: 8,
+                    line: String::from("- [x] **Focused checked**"),
+                    name: String::from("**Focused checked**"),
+                    is_completed: true,
+                    is_focused: true,
+                },
+            ],
+        )
+    }
+
+    #[test]
+    fn test_get_all_tasks() {
+        // Empty contents
+        match get_all_tasks(&FileReaderMock {
+            outcome: Ok(Vec::new()),
+        }) {
+            Ok(tasks) => assert_eq!(tasks, Vec::new()),
+            Err(e) => panic!(e),
+        }
+
+        // Std contents
+        let (test_contents, expected_tasks) = get_std_test_contents();
+
+        match get_all_tasks(&FileReaderMock {
+            outcome: Ok(test_contents),
+        }) {
+            Ok(tasks) => assert_eq!(tasks, expected_tasks),
+            Err(e) => panic!(e),
+        }
+    }
+
+    #[test]
+    fn test_get_open_tasks() {
+        // Empty contents
+        match get_open_tasks(&FileReaderMock {
+            outcome: Ok(Vec::new()),
+        }) {
+            Ok(tasks) => assert_eq!(tasks, Vec::new()),
+            Err(e) => panic!(e),
+        }
+
+        // Std contents
+        let (test_contents, expected_tasks) = get_std_test_contents();
+
+        match get_open_tasks(&FileReaderMock {
+            outcome: Ok(test_contents),
+        }) {
+            Ok(tasks) => assert_eq!(
+                tasks,
+                vec![
+                    expected_tasks[0].clone(),
+                    expected_tasks[1].clone(),
+                    expected_tasks[2].clone(),
+                    expected_tasks[3].clone(),
+                ]
+            ),
+            Err(e) => panic!(e),
+        }
+    }
+
+    #[test]
+    fn test_get_focused_open_tasks() {
+        // Empty contents
+        match get_focused_open_tasks(&FileReaderMock {
+            outcome: Ok(Vec::new()),
+        }) {
+            Ok(tasks) => assert_eq!(tasks, Vec::new()),
+            Err(e) => panic!(e),
+        }
+
+        // Std contents
+        let (test_contents, expected_tasks) = get_std_test_contents();
+
+        match get_focused_open_tasks(&FileReaderMock {
+            outcome: Ok(test_contents),
+        }) {
+            Ok(tasks) => assert_eq!(tasks, vec![expected_tasks[2].clone()]),
+            Err(e) => panic!(e),
+        }
     }
 }
