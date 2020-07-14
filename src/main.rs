@@ -526,7 +526,7 @@ mod tests {
             return StringOutputerMock { info_buf: vec![] };
         }
         fn get_info(&self) -> String {
-            self.info_buf.join("\n")
+            self.info_buf.join("")
         }
     }
     impl StringOutputer for StringOutputerMock {
@@ -810,7 +810,6 @@ mod tests {
         // Empty contents
         {
             let outputer_mock = &mut StringOutputerMock::new();
-
             let content_getter_mock = &FileReaderMock {
                 outcome: Ok(Vec::new()),
             };
@@ -831,6 +830,35 @@ mod tests {
             assert_eq!(
                 outputer_mock.get_info(),
                 "[3] **Standard unchecked focused**\n"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cmd_list() {
+        // Empty contents
+        {
+            let outputer_mock = &mut StringOutputerMock::new();
+            let content_getter_mock = &FileReaderMock {
+                outcome: Ok(Vec::new()),
+            };
+
+            cmd_list(outputer_mock, content_getter_mock).unwrap();
+            assert_eq!(outputer_mock.get_info(), "");
+        }
+
+        // Std contents
+        {
+            let outputer_mock = &mut StringOutputerMock::new();
+            let (test_contents, _) = get_std_test_contents();
+            let content_getter_mock = &FileReaderMock {
+                outcome: Ok(test_contents),
+            };
+
+            cmd_list(outputer_mock, content_getter_mock).unwrap();
+            assert_eq!(
+                outputer_mock.get_info(),
+                "[1] Standard unchecked\n[2] Collapsed unchecked\n[3] **Standard unchecked focused**\n[4] Star unchecked\n"
             );
         }
     }
