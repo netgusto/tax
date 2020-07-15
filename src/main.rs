@@ -29,9 +29,6 @@ use cmd_focus::cmd_focus;
 mod cmd_check;
 use cmd_check::cmd_check;
 
-mod cmd_tidy;
-use cmd_tidy::cmd_tidy;
-
 mod cmd_prune;
 use cmd_prune::cmd_prune;
 
@@ -98,8 +95,6 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
         Some("list") => cmd_list(outputer, content_handler_real),
         Some("current") => cmd_current(outputer, content_handler_real, false),
         Some("cycle") => cmd_current(outputer, content_handler_real, true),
-
-        Some("tidy") => cmd_tidy(outputer),
 
         Some("prune") => cmd_prune(outputer, content_handler_real, content_handler_real),
 
