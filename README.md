@@ -7,9 +7,9 @@ Tasks are markdown:
 ```
 # Things to do
 
-- [*] Do the laundry
+- [x] Do the laundry
 - [ ] Be good
-- [ ] Send that email
+- [ ] **Send that email**
 ```
 
 When run, `tax` will pick one open task from the taxfile and display it. If no task is open, it displays nothing.
