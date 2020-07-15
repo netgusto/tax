@@ -7,9 +7,9 @@ Tasks are markdown:
 ```
 # Things to do
 
-- [*] Do the laundry
+- [x] Do the laundry
 - [ ] Be good
-- [ ] Send that email
+- [ ] **Send that email**
 ```
 
 When run, `tax` will pick one open task from the taxfile and display it. If no task is open, it displays nothing.
@@ -53,3 +53,10 @@ Requires `$EDITOR` to be set and valid.
 ## License
 
 See [LICENSE.md]()
+
+## TODO
+
+* tidy cmd: moves checked to bottom, focused on top
+* purge cmd: removes all checked
+* add cmd: Add a task on top
+* focus / blur / check / uncheck: tax focus some words => find match in tasks and do; if none, error; if multiple, list and ask for number
