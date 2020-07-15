@@ -29,6 +29,15 @@ use cmd_focus::cmd_focus;
 mod cmd_check;
 use cmd_check::cmd_check;
 
+mod cmd_prune;
+use cmd_prune::cmd_prune;
+
+mod cmd_cat;
+use cmd_cat::cmd_cat;
+
+mod cmd_which;
+use cmd_which::cmd_which;
+
 fn main() -> Result<(), String> {
     run_app(env::args().collect())
 }
@@ -86,6 +95,12 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
         Some("list") => cmd_list(outputer, content_handler_real),
         Some("current") => cmd_current(outputer, content_handler_real, false),
         Some("cycle") => cmd_current(outputer, content_handler_real, true),
+
+        Some("prune") => cmd_prune(outputer, content_handler_real, content_handler_real),
+
+        Some("cat") => cmd_cat(outputer, content_handler_real),
+
+        Some("which") => cmd_which(outputer, taxfile_path_getter_real),
 
         None => cmd_list(outputer, content_handler_real), // default: list
         _ => Err(format!("Unknown command \"{}\"", cmd.unwrap())),
