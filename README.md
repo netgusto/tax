@@ -53,3 +53,10 @@ Requires `$EDITOR` to be set and valid.
 ## License
 
 See [LICENSE.md]()
+
+## TODO
+
+* tidy cmd: moves checked to bottom, focused on top
+* purge cmd: removes all checked
+* add cmd: Add a task on top
+* focus / blur / check / uncheck: tax focus some words => find match in tasks and do; if none, error; if multiple, list and ask for number
