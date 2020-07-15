@@ -78,6 +78,13 @@ pub fn get_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, S
         .collect())
 }
 
+pub fn get_closed_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
+    Ok(get_all_tasks(content_getter)?
+        .into_iter()
+        .filter(|task| task.is_completed)
+        .collect())
+}
+
 pub fn get_focused_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
     Ok(get_open_tasks(content_getter)?
         .into_iter()
@@ -87,6 +94,10 @@ pub fn get_focused_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<
 
 pub fn is_check_symbol(s: &str) -> bool {
     return s == "x";
+}
+
+pub fn format_numbered_task(task: &Task) -> String {
+    format!("[{}] {}", task.num, task.name)
 }
 
 pub fn toggle_line_completion(line: String, completed: bool) -> String {
@@ -154,6 +165,32 @@ pub fn toggle_line_focus(line: String, focused: bool) -> String {
             format!("{}{}{}{}", &cap[1], &cap[2], &cap[3], replacement)
         }
     }
+}
+
+pub fn remove_lines_in_contents(
+    content_getter: &dyn ContentGetter,
+    line_nums: Vec<usize>,
+) -> Result<String, String> {
+    let mut line_num = 1;
+
+    let mut content = String::from("");
+
+    use std::collections::HashMap;
+    let mut line_nums_hash = HashMap::new();
+
+    for l in &line_nums {
+        line_nums_hash.insert(*l, true);
+    }
+
+    for line in content_getter.get_contents()? {
+        if !line_nums_hash.contains_key(&line_num) {
+            content += format!("{}\n", line).as_str();
+        }
+
+        line_num += 1;
+    }
+
+    Ok(content)
 }
 
 pub fn replace_line_in_contents(
