@@ -214,6 +214,35 @@ pub fn replace_line_in_contents(
 
     Ok(content)
 }
+pub fn add_line_in_contents(
+    content_getter: &dyn ContentGetter,
+    add_line_num: usize,
+    added_line: String,
+) -> Result<String, String> {
+    let mut line_num = 1;
+
+    let mut content = String::from("");
+
+    let mut added = false;
+
+    for line in content_getter.get_contents()? {
+        if line_num == add_line_num {
+            content += format!("{}\n{}\n", added_line, line).as_str();
+            added = true;
+        } else {
+            content += format!("{}\n", line).as_str();
+        }
+
+        line_num += 1;
+    }
+
+    if !added {
+        // either empty file or line past end of file
+        content += format!("{}\n", added_line).as_str();
+    }
+
+    Ok(content)
+}
 
 #[cfg(test)]
 mod tests {

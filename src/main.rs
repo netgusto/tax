@@ -38,6 +38,9 @@ use cmd_cat::cmd_cat;
 mod cmd_which;
 use cmd_which::cmd_which;
 
+mod cmd_add;
+use cmd_add::cmd_add;
+
 fn main() -> Result<(), String> {
     run_app(env::args().collect())
 }
@@ -69,7 +72,7 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
             args,
             true,
         ),
-        Some("blur") => cmd_focus(
+        Some("blur") | Some("unfocus") => cmd_focus(
             outputer,
             content_handler_real,
             content_handler_real,
@@ -96,11 +99,29 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
         Some("current") => cmd_current(outputer, content_handler_real, false),
         Some("cycle") => cmd_current(outputer, content_handler_real, true),
 
-        Some("prune") => cmd_prune(outputer, content_handler_real, content_handler_real),
+        Some("prune") | Some("purge") => {
+            cmd_prune(outputer, content_handler_real, content_handler_real)
+        }
 
-        Some("cat") => cmd_cat(outputer, content_handler_real),
+        Some("cat") | Some("view") => cmd_cat(outputer, content_handler_real),
 
         Some("which") => cmd_which(outputer, taxfile_path_getter_real),
+
+        Some("add") | Some("push") | Some("prepend") => cmd_add(
+            outputer,
+            content_handler_real,
+            content_handler_real,
+            args,
+            cmd_add::AddPosition::Prepend,
+        ),
+
+        Some("append") => cmd_add(
+            outputer,
+            content_handler_real,
+            content_handler_real,
+            args,
+            cmd_add::AddPosition::Append,
+        ),
 
         None => cmd_list(outputer, content_handler_real), // default: list
         _ => Err(format!("Unknown command \"{}\"", cmd.unwrap())),
