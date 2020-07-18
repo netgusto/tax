@@ -1,10 +1,15 @@
 [package]
 name = "tax"
-version = "0.1.0"
-authors = ["Jerome Schneider <jerome.schneider@algolia.com>"]
+version = "0.0.1"
+authors = ["Jerome Schneider <mail@jeromeschneider.f>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+description = "tax is a cli task list manager"
+homepage = "https://github.com/netgusto/tax"
+repository = "https://github.com/netgusto/tax"
+readme = "README.md"
+keywords = ["task", "markdown", "orgmode", "cli", "todo"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 regex = "1"
