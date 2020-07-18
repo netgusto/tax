@@ -98,6 +98,14 @@ Opens the current task file in `$EDITOR`.
 
 Tells which tasks file is currently in use. Useful for scripting.
 
+## Build/Install
+
+Building and installing requires Rust: https://www.rust-lang.org/tools/install
+
+```sh
+cargo install tax
+```
+
 ## Use
 
 ### Include in prompt
