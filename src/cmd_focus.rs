@@ -1,12 +1,13 @@
 use crate::cmd_list::cmd_list;
 use crate::get_cmd_rank_arg;
-use crate::services::{ContentGetter, ContentSetter, StringOutputer};
+use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
 use crate::tasks::{get_all_tasks, replace_line_in_contents, toggle_line_focus};
 
 pub fn cmd_focus(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     content_setter: &dyn ContentSetter,
+    user_cmd_runner: &dyn UserCmdRunner,
     args: Vec<String>,
     focus: bool,
 ) -> Result<(), String> {
@@ -43,7 +44,29 @@ pub fn cmd_focus(
     outputer.info(format!("{}: [{}] {}", action, task.num, task.name));
 
     let replaced_content =
-        replace_line_in_contents(content_getter, task.line_num, replacement_line)?;
+        replace_line_in_contents(content_getter, task.line_num, replacement_line.clone())?;
 
-    content_setter.set_contents(replaced_content)
+    let result = content_setter.set_contents(replaced_content);
+
+    let mut updated_task = task.clone();
+    updated_task.line = replacement_line;
+    updated_task.is_focused = focus;
+
+    match user_cmd_runner.build(
+        String::from("focus"),
+        String::from(if focus { "FOCUS" } else { "BLUR" }),
+        format!(
+            "{} \"{}\"",
+            if focus { "Focused" } else { "Blurred" },
+            task.name
+        ),
+    ) {
+        Ok(Some(mut cmd)) => {
+            user_cmd_runner.run(user_cmd_runner.env_single_task(updated_task, &mut cmd))?;
+        }
+        Ok(None) => (),
+        Err(e) => return Err(e),
+    };
+
+    result
 }

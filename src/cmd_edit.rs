@@ -1,8 +1,11 @@
-use crate::services::TaxfilePathGetter;
+use crate::services::{TaxfilePathGetter, UserCmdRunner};
 use std::env;
 use std::process::Command;
 
-pub fn cmd_edit(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<(), String> {
+pub fn cmd_edit(
+    taxfile_path_getter: &dyn TaxfilePathGetter,
+    user_cmd_runner: &dyn UserCmdRunner,
+) -> Result<(), String> {
     let str_file_path = taxfile_path_getter.get_taxfile_path().unwrap();
 
     let res = env::var("EDITOR");
@@ -16,7 +19,19 @@ pub fn cmd_edit(taxfile_path_getter: &dyn TaxfilePathGetter) -> Result<(), Strin
 
     if let Ok(mut child) = Command::new(editor).arg(str_file_path).spawn() {
         match child.wait() {
-            Ok(_) => (),
+            Ok(_) => {
+                match user_cmd_runner.build(
+                    String::from("edit"),
+                    String::from("EDIT"),
+                    String::from("Manually edited tasks"),
+                ) {
+                    Ok(Some(mut cmd)) => {
+                        user_cmd_runner.run(&mut cmd)?;
+                    }
+                    Ok(None) => (),
+                    Err(e) => return Err(e),
+                };
+            }
             Err(_) => {
                 return Err(String::from("Could not run $EDITOR"));
             }

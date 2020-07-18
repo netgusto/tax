@@ -1,7 +1,10 @@
+use crate::model::Task;
+
 use std::env;
 use std::fs::{self, File};
 use std::io::{prelude::*, BufReader};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 pub trait StringOutputer {
     fn info(&mut self, s: String) -> ();
@@ -32,6 +35,7 @@ pub fn home_getter_real() -> Option<PathBuf> {
 
 pub trait TaxfilePathGetter {
     fn get_taxfile_path(&self) -> Result<String, String>;
+    fn get_taxfile_dir(&self) -> Result<String, String>;
 }
 
 pub struct TaxfilePathGetterReal {
@@ -50,6 +54,13 @@ impl TaxfilePathGetter for TaxfilePathGetterReal {
                 )),
             },
         }
+    }
+
+    fn get_taxfile_dir(&self) -> Result<String, String> {
+        let taxfile = self.get_taxfile_path()?;
+        let mut taxfile_pathbuf = PathBuf::from(taxfile);
+        taxfile_pathbuf.pop();
+        Ok(String::from(taxfile_pathbuf.to_str().unwrap()))
     }
 }
 
@@ -86,6 +97,76 @@ impl ContentSetter for ContentHandlerReal {
         match fs::write(&self.path, contents) {
             Ok(_) => Ok(()),
             Err(_) => Err(String::from("Unable to write file")),
+        }
+    }
+}
+
+pub struct UserCmdRunnerReal {
+    pub taxfile_path_getter: &'static dyn TaxfilePathGetter,
+}
+
+pub trait UserCmdRunner {
+    fn env_single_task<'a>(&self, task: Task, cmd: &'a mut Command) -> &'a mut Command;
+    fn build(
+        &self,
+        cmd: String,
+        operation: String,
+        message: String,
+    ) -> Result<Option<Command>, String>;
+    fn run(&self, cmd: &mut Command) -> Result<(), String>;
+}
+
+impl UserCmdRunner for UserCmdRunnerReal {
+    fn env_single_task<'a>(&self, task: Task, cmd: &'a mut Command) -> &'a mut Command {
+        cmd.env("TAX_TASK_NUM", format!("{}", task.num))
+            .env("TAX_TASK_NAME", &task.name)
+            .env("TAX_TASK_LINE", &task.line)
+            .env("TAX_TASK_LINE_NUM", format!("{}", task.line_num))
+            .env(
+                "TAX_TASK_COMPLETED",
+                if task.is_completed { "1" } else { "0" },
+            )
+            .env("TAX_TASK_FOCUSED", if task.is_focused { "1" } else { "0" })
+    }
+
+    fn build(
+        &self,
+        cmd: String,
+        operation: String,
+        message: String,
+    ) -> Result<Option<Command>, String> {
+        let sh_path = match which::which("sh") {
+            Ok(path) => path,
+            Err(_) => return Err(String::from("Could not find sh")),
+        };
+
+        match env::var("TAX_CHANGE_CMD") {
+            Ok(change_cmd) => {
+                let mut cmd_obj = Command::new(sh_path);
+                cmd_obj
+                    .arg("-c")
+                    .arg(change_cmd)
+                    .env("TAX_TAXFILE", self.taxfile_path_getter.get_taxfile_path()?)
+                    .env(
+                        "TAX_TAXFILE_FOLDER",
+                        self.taxfile_path_getter.get_taxfile_dir()?,
+                    )
+                    .env("TAX_CMD", cmd)
+                    .env("TAX_OPERATION", operation)
+                    .env("TAX_MESSAGE", message);
+                return Ok(Some(cmd_obj));
+            }
+            Err(_) => Ok(None),
+        }
+    }
+
+    fn run(&self, cmd: &mut Command) -> Result<(), String> {
+        match cmd.spawn() {
+            Ok(mut child) => match child.wait() {
+                Ok(_) => Ok(()),
+                Err(e) => Err(format!("{}", e)),
+            },
+            Err(e) => Err(format!("{}", e)),
         }
     }
 }

@@ -58,4 +58,3 @@ See [LICENSE.md]()
 
 * tidy cmd: moves checked to bottom, focused on top
 * focus / blur / check / uncheck: tax focus some words => find match in tasks and do; if none, error; if multiple, list and ask for number
-* execute command after each file change (take cmd from ENV), with task details set as ENV vars (use cases: log, git versionning, etc.)

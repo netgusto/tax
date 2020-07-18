@@ -8,7 +8,7 @@ mod services;
 use services::ContentHandlerReal;
 use services::StringOutputerReal;
 use services::{env_getter_real, home_getter_real};
-use services::{TaxfilePathGetter, TaxfilePathGetterReal};
+use services::{TaxfilePathGetter, TaxfilePathGetterReal, UserCmdRunnerReal};
 
 mod model;
 mod tasks;
@@ -52,78 +52,88 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
         None
     };
 
-    let taxfile_path_getter_real = &TaxfilePathGetterReal {
+    let taxfile_path_getter = &TaxfilePathGetterReal {
         get_env: env_getter_real,
         get_home: home_getter_real,
     };
 
-    let file_path = taxfile_path_getter_real.get_taxfile_path()?;
-    let content_handler_real = &ContentHandlerReal { path: file_path };
+    let user_cmd_runner = &UserCmdRunnerReal {
+        taxfile_path_getter: taxfile_path_getter,
+    };
+
+    let file_path = taxfile_path_getter.get_taxfile_path()?;
+    let content_handler = &ContentHandlerReal { path: file_path };
 
     let outputer = &mut StringOutputerReal {};
 
     match cmd {
-        Some("edit") => cmd_edit(taxfile_path_getter_real),
+        Some("edit") => cmd_edit(taxfile_path_getter, user_cmd_runner),
 
         Some("focus") => cmd_focus(
             outputer,
-            content_handler_real,
-            content_handler_real,
+            content_handler,
+            content_handler,
+            user_cmd_runner,
             args,
             true,
         ),
         Some("blur") | Some("unfocus") => cmd_focus(
             outputer,
-            content_handler_real,
-            content_handler_real,
+            content_handler,
+            content_handler,
+            user_cmd_runner,
             args,
             false,
         ),
 
         Some("check") => cmd_check(
             outputer,
-            content_handler_real,
-            content_handler_real,
+            content_handler,
+            content_handler,
+            user_cmd_runner,
             args,
             true,
         ),
         Some("uncheck") => cmd_check(
             outputer,
-            content_handler_real,
-            content_handler_real,
+            content_handler,
+            content_handler,
+            user_cmd_runner,
             args,
             false,
         ),
 
-        Some("list") => cmd_list(outputer, content_handler_real),
-        Some("current") => cmd_current(outputer, content_handler_real, false),
-        Some("cycle") => cmd_current(outputer, content_handler_real, true),
+        Some("list") => cmd_list(outputer, content_handler),
+        Some("current") => cmd_current(outputer, content_handler, false),
+        Some("cycle") => cmd_current(outputer, content_handler, true),
 
         Some("prune") | Some("purge") => {
-            cmd_prune(outputer, content_handler_real, content_handler_real)
+            cmd_prune(outputer, content_handler, content_handler, user_cmd_runner)
         }
 
-        Some("cat") | Some("view") => cmd_cat(outputer, content_handler_real),
+        Some("cat") | Some("view") => cmd_cat(outputer, content_handler),
 
-        Some("which") => cmd_which(outputer, taxfile_path_getter_real),
+        Some("which") => cmd_which(outputer, taxfile_path_getter),
 
         Some("add") | Some("push") | Some("prepend") => cmd_add(
             outputer,
-            content_handler_real,
-            content_handler_real,
+            content_handler,
+            content_handler,
+            user_cmd_runner,
             args,
             cmd_add::AddPosition::Prepend,
         ),
 
         Some("append") => cmd_add(
             outputer,
-            content_handler_real,
-            content_handler_real,
+            content_handler,
+            content_handler,
+            user_cmd_runner,
             args,
             cmd_add::AddPosition::Append,
         ),
 
-        None => cmd_list(outputer, content_handler_real), // default: list
+        None => cmd_list(outputer, content_handler), // default: list
         _ => Err(format!("Unknown command \"{}\"", cmd.unwrap())),
     }
 }

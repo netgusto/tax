@@ -1,12 +1,13 @@
 use super::get_cmd_rank_arg;
 use crate::cmd_list::cmd_list;
-use crate::services::{ContentGetter, ContentSetter, StringOutputer};
+use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
 use crate::tasks::{get_all_tasks, replace_line_in_contents, toggle_line_completion};
 
 pub fn cmd_check(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     content_setter: &dyn ContentSetter,
+    user_cmd_runner: &dyn UserCmdRunner,
     args: Vec<String>,
     completed: bool,
 ) -> Result<(), String> {
@@ -34,7 +35,30 @@ pub fn cmd_check(
     let action = if completed { "Checked" } else { "Unchecked" };
     outputer.info(format!("{}: [{}] {}", action, task.num, task.name));
 
-    let replaced_content = replace_line_in_contents(content_getter, task.line_num, checked_line)?;
+    let replaced_content =
+        replace_line_in_contents(content_getter, task.line_num, checked_line.clone())?;
 
-    content_setter.set_contents(replaced_content)
+    let result = content_setter.set_contents(replaced_content);
+
+    let mut updated_task = task.clone();
+    updated_task.is_completed = completed;
+    updated_task.line = checked_line;
+
+    match user_cmd_runner.build(
+        String::from("check"),
+        String::from(if completed { "CHECK" } else { "UNCHECK" }),
+        format!(
+            "Marked \"{}\" as {}",
+            task.name,
+            if completed { "done" } else { "not done" }
+        ),
+    ) {
+        Ok(Some(mut cmd)) => {
+            user_cmd_runner.run(user_cmd_runner.env_single_task(updated_task, &mut cmd))?;
+        }
+        Ok(None) => (),
+        Err(e) => return Err(e),
+    };
+
+    result
 }
