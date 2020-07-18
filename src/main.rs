@@ -59,6 +59,7 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
 
     let user_cmd_runner = &UserCmdRunnerReal {
         taxfile_path_getter: taxfile_path_getter,
+        get_env: env_getter_real,
     };
 
     let file_path = taxfile_path_getter.get_taxfile_path()?;

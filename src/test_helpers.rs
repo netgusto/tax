@@ -12,7 +12,7 @@ pub fn home_getter_guybrush() -> Option<std::path::PathBuf> {
 #[allow(dead_code)]
 pub fn env_getter_taxfile(name: &str) -> Option<String> {
     match name {
-        "TAXFILE" => Some("/path/to/overriden/taxfile".to_string()),
+        "TAX_FILE" => Some("/path/to/overriden/taxfile".to_string()),
         _ => None,
     }
 }
