@@ -45,12 +45,12 @@ pub struct TaxfilePathGetterReal {
 
 impl TaxfilePathGetter for TaxfilePathGetterReal {
     fn get_taxfile_path(&self) -> Result<String, String> {
-        match (self.get_env)("TAXFILE") {
+        match get_env_var_if_not_empty("TAX_FILE", self.get_env) {
             Some(v) => Ok(v),
             None => match (self.get_home)() {
                 None => Err(String::from("Could not find home dir")),
                 Some(home) => Ok(String::from(
-                    home.join(Path::new("taxfile")).to_str().unwrap(),
+                    home.join(Path::new("tasks.md")).to_str().unwrap(),
                 )),
             },
         }
@@ -103,6 +103,7 @@ impl ContentSetter for ContentHandlerReal {
 
 pub struct UserCmdRunnerReal {
     pub taxfile_path_getter: &'static dyn TaxfilePathGetter,
+    pub get_env: EnvGetter,
 }
 
 pub trait UserCmdRunner {
@@ -140,15 +141,15 @@ impl UserCmdRunner for UserCmdRunnerReal {
             Err(_) => return Err(String::from("Could not find sh")),
         };
 
-        match env::var("TAX_CHANGE_CMD") {
-            Ok(change_cmd) => {
+        match get_env_var_if_not_empty("TAX_CHANGE_CMD", self.get_env) {
+            Some(change_cmd) => {
                 let mut cmd_obj = Command::new(sh_path);
                 cmd_obj
                     .arg("-c")
                     .arg(change_cmd)
-                    .env("TAX_TAXFILE", self.taxfile_path_getter.get_taxfile_path()?)
+                    .env("TAX_FILE", self.taxfile_path_getter.get_taxfile_path()?)
                     .env(
-                        "TAX_TAXFILE_FOLDER",
+                        "TAX_FILE_FOLDER",
                         self.taxfile_path_getter.get_taxfile_dir()?,
                     )
                     .env("TAX_CMD", cmd)
@@ -156,7 +157,7 @@ impl UserCmdRunner for UserCmdRunnerReal {
                     .env("TAX_MESSAGE", message);
                 return Ok(Some(cmd_obj));
             }
-            Err(_) => Ok(None),
+            None => Ok(None),
         }
     }
 
@@ -168,6 +169,19 @@ impl UserCmdRunner for UserCmdRunnerReal {
             },
             Err(e) => Err(format!("{}", e)),
         }
+    }
+}
+
+fn get_env_var_if_not_empty(name: &str, get_env: EnvGetter) -> Option<String> {
+    match (get_env)(name) {
+        Some(v) => {
+            if v.trim().len() == 0 {
+                None
+            } else {
+                Some(v)
+            }
+        }
+        None => None,
     }
 }
 
@@ -185,7 +199,7 @@ mod tests {
         };
         assert_eq!(
             path_getter_noenv.get_taxfile_path(),
-            Ok(String::from("/home/guybrush/taxfile"))
+            Ok(String::from("/home/guybrush/tasks.md"))
         );
 
         let path_getter_yesenv = &TaxfilePathGetterReal {
