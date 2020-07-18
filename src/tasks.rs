@@ -55,7 +55,7 @@ pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, St
                 tasks.push(Task {
                     name: name,
                     num: task_num,
-                    is_completed: is_check_symbol(check_symbol),
+                    is_checked: is_check_symbol(check_symbol),
                     line_num: line_num,
                     line: String::from(&cap[0]),
                     is_focused: is_focused,
@@ -74,14 +74,14 @@ pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, St
 pub fn get_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
     Ok(get_all_tasks(content_getter)?
         .into_iter()
-        .filter(|task| !task.is_completed)
+        .filter(|task| !task.is_checked)
         .collect())
 }
 
 pub fn get_closed_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
     Ok(get_all_tasks(content_getter)?
         .into_iter()
-        .filter(|task| task.is_completed)
+        .filter(|task| task.is_checked)
         .collect())
 }
 
@@ -100,8 +100,8 @@ pub fn format_numbered_task(task: &Task) -> String {
     format!("[{}] {}", task.num, task.name)
 }
 
-pub fn toggle_line_completion(line: String, completed: bool) -> String {
-    let (re, replacement) = if completed {
+pub fn toggle_line_completion(line: String, checked: bool) -> String {
+    let (re, replacement) = if checked {
         (
             Regex::new(
                 r"(?x)

@@ -123,10 +123,7 @@ impl UserCmdRunner for UserCmdRunnerReal {
             .env("TAX_TASK_NAME", &task.name)
             .env("TAX_TASK_LINE", &task.line)
             .env("TAX_TASK_LINE_NUM", format!("{}", task.line_num))
-            .env(
-                "TAX_TASK_COMPLETED",
-                if task.is_completed { "1" } else { "0" },
-            )
+            .env("TAX_TASK_CHECKED", if task.is_checked { "1" } else { "0" })
             .env("TAX_TASK_FOCUSED", if task.is_focused { "1" } else { "0" })
     }
 

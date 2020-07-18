@@ -23,9 +23,9 @@ pub fn cmd_focus(
 
     let task = &tasks[rank_one_based - 1];
 
-    if task.is_completed {
+    if task.is_checked {
         outputer.info(format!(
-            "Completed, cannot proceed: [{}] {}",
+            "Task is completed, cannot proceed: [{}] {}",
             task.num, task.name
         ));
         return Ok(());
