@@ -1,3 +1,4 @@
+use crate::cmd_list;
 use crate::model::Task;
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
 use crate::tasks::{add_line_in_contents, get_all_tasks};
@@ -40,15 +41,14 @@ pub fn cmd_add(
     let new_line = format!("- [ ] {}", task_name);
 
     let result = add_line_in_contents(content_getter, line_num, new_line.clone())?;
-    outputer.info(format!("{}", result));
 
-    let set_result = content_setter.set_contents(result);
+    content_setter.set_contents(result)?;
 
     let new_task = Task {
         name: task_name.clone(),
         line: new_line,
         line_num: line_num,
-        is_completed: false,
+        is_checked: false,
         is_focused: false,
         num: task_num,
     };
@@ -65,5 +65,5 @@ pub fn cmd_add(
         Err(e) => return Err(e),
     };
 
-    set_result
+    cmd_list(outputer, content_getter)
 }

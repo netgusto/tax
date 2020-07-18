@@ -63,7 +63,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 line_num: 2,
                 line: String::from("- [ ] Standard unchecked"),
                 name: String::from("Standard unchecked"),
-                is_completed: false,
+                is_checked: false,
                 is_focused: false,
             },
             crate::model::Task {
@@ -71,7 +71,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 line_num: 3,
                 line: String::from("- [] Collapsed unchecked"),
                 name: String::from("Collapsed unchecked"),
-                is_completed: false,
+                is_checked: false,
                 is_focused: false,
             },
             crate::model::Task {
@@ -79,7 +79,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 line_num: 4,
                 line: String::from("- [ ] **Standard unchecked focused**"),
                 name: String::from("**Standard unchecked focused**"),
-                is_completed: false,
+                is_checked: false,
                 is_focused: true,
             },
             crate::model::Task {
@@ -87,7 +87,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 line_num: 5,
                 line: String::from("* [ ] Star unchecked"),
                 name: String::from("Star unchecked"),
-                is_completed: false,
+                is_checked: false,
                 is_focused: false,
             },
             crate::model::Task {
@@ -95,7 +95,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 line_num: 7,
                 line: String::from("- [x] Checked"),
                 name: String::from("Checked"),
-                is_completed: true,
+                is_checked: true,
                 is_focused: false,
             },
             crate::model::Task {
@@ -103,7 +103,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 line_num: 8,
                 line: String::from("- [x] **Focused checked**"),
                 name: String::from("**Focused checked**"),
-                is_completed: true,
+                is_checked: true,
                 is_focused: true,
             },
         ],

@@ -9,7 +9,7 @@ pub fn cmd_check(
     content_setter: &dyn ContentSetter,
     user_cmd_runner: &dyn UserCmdRunner,
     args: Vec<String>,
-    completed: bool,
+    checked: bool,
 ) -> Result<(), String> {
     let rank_one_based = match get_cmd_rank_arg(args)? {
         None => return cmd_list(outputer, content_getter),
@@ -23,16 +23,16 @@ pub fn cmd_check(
 
     let task = &tasks[rank_one_based - 1];
 
-    if completed && task.is_completed {
+    if checked && task.is_checked {
         outputer.info(format!("Already checked: [{}] {}", task.num, task.name));
         return Ok(());
-    } else if !completed && !task.is_completed {
+    } else if !checked && !task.is_checked {
         outputer.info(format!("Already unckecked: [{}] {}", task.num, task.name));
         return Ok(());
     }
 
-    let checked_line = toggle_line_completion(task.line.clone(), completed);
-    let action = if completed { "Checked" } else { "Unchecked" };
+    let checked_line = toggle_line_completion(task.line.clone(), checked);
+    let action = if checked { "Checked" } else { "Unchecked" };
     outputer.info(format!("{}: [{}] {}", action, task.num, task.name));
 
     let replaced_content =
@@ -41,16 +41,16 @@ pub fn cmd_check(
     let result = content_setter.set_contents(replaced_content);
 
     let mut updated_task = task.clone();
-    updated_task.is_completed = completed;
+    updated_task.is_checked = checked;
     updated_task.line = checked_line;
 
     match user_cmd_runner.build(
         String::from("check"),
-        String::from(if completed { "CHECK" } else { "UNCHECK" }),
+        String::from(if checked { "CHECK" } else { "UNCHECK" }),
         format!(
             "Marked \"{}\" as {}",
             task.name,
-            if completed { "done" } else { "not done" }
+            if checked { "done" } else { "not done" }
         ),
     ) {
         Ok(Some(mut cmd)) => {
