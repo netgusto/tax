@@ -1,4 +1,4 @@
-# tax, the prompt task list [![CircleCI](https://circleci.com/gh/netgusto/tax.svg?style=svg)](https://circleci.com/gh/netgusto/tax)
+# tax, the CLI Task List [![CircleCI](https://circleci.com/gh/netgusto/tax.svg?style=svg)](https://circleci.com/gh/netgusto/tax)
 
 Displays / manages the tasks in `~/tasks.md`, or from the file pointed by `$TAX_FILE` if set.
 
