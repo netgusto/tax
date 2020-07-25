@@ -18,7 +18,7 @@ tax is meant to offer basic operations to handle a task list from the CLI, optio
 
 ## Commands
 
-### tax | tax list
+### tax | tax list | tax ls
 
 Displays the current list of open tasks.
 

@@ -1,20 +1,19 @@
 use crate::cmd_list::cmd_list;
 use crate::get_cmd_rank_arg;
-use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
-use crate::tasks::{
-    display_numbered_task, get_all_tasks, remove_focus, replace_line_in_contents, toggle_line_focus,
-};
+use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
+use crate::tasks::{get_all_tasks, remove_focus, replace_line_in_contents, toggle_line_focus};
 
 pub fn cmd_focus(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     content_setter: &dyn ContentSetter,
     user_cmd_runner: &dyn UserCmdRunner,
+    task_formatter: &TaskFormatter,
     args: Vec<String>,
     focus: bool,
 ) -> Result<(), String> {
     let rank_one_based = match get_cmd_rank_arg(args)? {
-        None => return cmd_list(outputer, content_getter),
+        None => return cmd_list(outputer, content_getter, task_formatter),
         Some(rank) => rank,
     };
 
@@ -28,16 +27,22 @@ pub fn cmd_focus(
     if task.is_checked {
         outputer.info(format!(
             "Task is completed, cannot proceed: {}",
-            display_numbered_task(&task)
+            task_formatter.display_numbered_task(&task)
         ));
         return Ok(());
     }
 
     if focus && task.is_focused {
-        outputer.info(format!("Already focused: {}", display_numbered_task(&task)));
+        outputer.info(format!(
+            "Already focused: {}",
+            task_formatter.display_numbered_task(&task)
+        ));
         return Ok(());
     } else if !focus && !task.is_focused {
-        outputer.info(format!("Already blured: {}", display_numbered_task(&task)));
+        outputer.info(format!(
+            "Already blured: {}",
+            task_formatter.display_numbered_task(&task)
+        ));
         return Ok(());
     }
 
@@ -57,7 +62,7 @@ pub fn cmd_focus(
     outputer.info(format!(
         "{}: {}",
         action,
-        display_numbered_task(&updated_task)
+        task_formatter.display_numbered_task(&updated_task)
     ));
 
     match user_cmd_runner.build(

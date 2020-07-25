@@ -1,20 +1,19 @@
 use super::get_cmd_rank_arg;
 use crate::cmd_list::cmd_list;
-use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
-use crate::tasks::{
-    display_numbered_task, get_all_tasks, replace_line_in_contents, toggle_line_completion,
-};
+use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
+use crate::tasks::{get_all_tasks, replace_line_in_contents, toggle_line_completion};
 
 pub fn cmd_check(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     content_setter: &dyn ContentSetter,
     user_cmd_runner: &dyn UserCmdRunner,
+    task_formatter: &TaskFormatter,
     args: Vec<String>,
     checked: bool,
 ) -> Result<(), String> {
     let rank_one_based = match get_cmd_rank_arg(args)? {
-        None => return cmd_list(outputer, content_getter),
+        None => return cmd_list(outputer, content_getter, task_formatter),
         Some(rank) => rank,
     };
 
@@ -26,19 +25,26 @@ pub fn cmd_check(
     let task = &tasks[rank_one_based - 1];
 
     if checked && task.is_checked {
-        outputer.info(format!("Already checked: {}", display_numbered_task(&task)));
+        outputer.info(format!(
+            "Already checked: {}",
+            task_formatter.display_numbered_task(&task)
+        ));
         return Ok(());
     } else if !checked && !task.is_checked {
         outputer.info(format!(
             "Already unckecked: {}",
-            display_numbered_task(&task)
+            task_formatter.display_numbered_task(&task)
         ));
         return Ok(());
     }
 
     let checked_line = toggle_line_completion(task.line.clone(), checked);
     let action = if checked { "Checked" } else { "Unchecked" };
-    outputer.info(format!("{}: {}", action, display_numbered_task(&task)));
+    outputer.info(format!(
+        "{}: {}",
+        action,
+        task_formatter.display_numbered_task(&task)
+    ));
 
     let replaced_content =
         replace_line_in_contents(content_getter, task.line_num, checked_line.clone())?;

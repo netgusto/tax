@@ -1,11 +1,12 @@
-use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
-use crate::tasks::{display_numbered_task, get_closed_tasks, remove_lines_in_contents};
+use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
+use crate::tasks::{get_closed_tasks, remove_lines_in_contents};
 
 pub fn cmd_prune(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     content_setter: &dyn ContentSetter,
     user_cmd_runner: &dyn UserCmdRunner,
+    task_formatter: &TaskFormatter,
 ) -> Result<(), String> {
     let tasks = get_closed_tasks(content_getter)?;
 
@@ -28,7 +29,7 @@ pub fn cmd_prune(
     outputer.info(msg.clone());
 
     for task in &tasks {
-        outputer.info(display_numbered_task(&task))
+        outputer.info(task_formatter.display_numbered_task(&task))
     }
 
     match user_cmd_runner.build(String::from("prune"), String::from("PRUNE"), msg) {

@@ -1,7 +1,5 @@
 use crate::model::Task;
 use crate::services::ContentGetter;
-use colored::control::SHOULD_COLORIZE;
-use colored::*;
 use regex::Regex;
 use std::time::SystemTime;
 
@@ -97,10 +95,6 @@ pub fn get_focused_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<
 
 pub fn is_check_symbol(s: &str) -> bool {
     return s == "x";
-}
-
-pub fn display_numbered_task(task: &Task) -> String {
-    format!("{} {}", display_task_num(task), display_task_name(task))
 }
 
 pub fn toggle_line_completion(line: String, checked: bool) -> String {
@@ -249,30 +243,6 @@ pub fn add_line_in_contents(
     }
 
     Ok(content)
-}
-
-fn display_bold(s: String) -> String {
-    if SHOULD_COLORIZE.should_colorize() {
-        s.clone().bold().to_string()
-    } else {
-        format!("**{}**", s)
-    }
-}
-
-pub fn display_task_name(task: &Task) -> String {
-    if task.is_focused {
-        display_bold(task.plain_name.clone())
-    } else {
-        task.name.clone()
-    }
-}
-
-pub fn display_task_num(task: &Task) -> String {
-    if task.is_focused && SHOULD_COLORIZE.should_colorize() {
-        format!("[{}]", display_bold(format!("{}", task.num)))
-    } else {
-        format!("[{}]", task.num)
-    }
 }
 
 #[cfg(test)]

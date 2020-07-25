@@ -1,13 +1,14 @@
-use crate::services::{ContentGetter, StringOutputer};
-use crate::tasks::{display_numbered_task, get_current_task};
+use crate::services::{ContentGetter, StringOutputer, TaskFormatter};
+use crate::tasks::get_current_task;
 
 pub fn cmd_current(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
+    task_formatter: &TaskFormatter,
     cycle: bool,
 ) -> Result<(), String> {
     match get_current_task(content_getter, cycle) {
-        Ok(Some(task)) => outputer.info(display_numbered_task(&task)),
+        Ok(Some(task)) => outputer.info(task_formatter.display_numbered_task(&task)),
         _ => (),
     };
     Ok(())
@@ -21,6 +22,9 @@ mod tests {
 
     #[test]
     fn test_cmd_current() {
+        let task_formatter = &TaskFormatter {
+            supports_colors: false,
+        };
         // Empty contents
         {
             let outputer_mock = &mut StringOutputerMock::new();
@@ -28,7 +32,7 @@ mod tests {
                 outcome: Ok(Vec::new()),
             };
 
-            cmd_current(outputer_mock, content_getter_mock, false).unwrap();
+            cmd_current(outputer_mock, content_getter_mock, &task_formatter, false).unwrap();
             assert_eq!(outputer_mock.get_info(), "");
         }
 
@@ -40,7 +44,7 @@ mod tests {
                 outcome: Ok(test_contents),
             };
 
-            cmd_current(outputer_mock, content_getter_mock, false).unwrap();
+            cmd_current(outputer_mock, content_getter_mock, &task_formatter, false).unwrap();
             assert_eq!(
                 outputer_mock.get_info(),
                 "[3] **Standard unchecked focused**\n"
