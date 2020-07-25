@@ -1,13 +1,14 @@
-use crate::services::{ContentGetter, StringOutputer};
-use crate::tasks::{format_numbered_task, get_open_tasks};
+use crate::services::{ContentGetter, StringOutputer, TaskFormatter};
+use crate::tasks::get_open_tasks;
 
 pub fn cmd_list(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
+    task_formatter: &TaskFormatter,
 ) -> Result<(), String> {
     let tasks = get_open_tasks(content_getter)?;
     for task in tasks {
-        outputer.info(format_numbered_task(&task))
+        outputer.info(task_formatter.display_numbered_task(&task))
     }
 
     Ok(())
@@ -20,6 +21,9 @@ mod tests {
 
     #[test]
     fn test_cmd_list() {
+        let task_formatter = &TaskFormatter {
+            supports_colors: false,
+        };
         // Empty contents
         {
             let outputer_mock = &mut StringOutputerMock::new();
@@ -27,7 +31,7 @@ mod tests {
                 outcome: Ok(Vec::new()),
             };
 
-            cmd_list(outputer_mock, content_getter_mock).unwrap();
+            cmd_list(outputer_mock, content_getter_mock, task_formatter).unwrap();
             assert_eq!(outputer_mock.get_info(), "");
         }
 
@@ -39,7 +43,7 @@ mod tests {
                 outcome: Ok(test_contents),
             };
 
-            cmd_list(outputer_mock, content_getter_mock).unwrap();
+            cmd_list(outputer_mock, content_getter_mock, task_formatter).unwrap();
             assert_eq!(
                 outputer_mock.get_info(),
                 "[1] Standard unchecked\n[2] Collapsed unchecked\n[3] **Standard unchecked focused**\n[4] Star unchecked\n"

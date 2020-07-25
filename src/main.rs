@@ -4,11 +4,13 @@ extern crate dirs;
 
 use std::env;
 
+use colored::control::SHOULD_COLORIZE;
+
 mod services;
-use services::ContentHandlerReal;
-use services::StringOutputerReal;
-use services::{env_getter_real, home_getter_real};
-use services::{TaxfilePathGetter, TaxfilePathGetterReal, UserCmdRunnerReal};
+use services::{
+    env_getter_real, home_getter_real, ContentHandlerReal, StringOutputerReal, TaskFormatter,
+    TaxfilePathGetter, TaxfilePathGetterReal, UserCmdRunnerReal,
+};
 
 mod model;
 mod tasks;
@@ -67,6 +69,10 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
 
     let outputer = &mut StringOutputerReal {};
 
+    let task_formatter = &TaskFormatter {
+        supports_colors: SHOULD_COLORIZE.should_colorize(),
+    };
+
     match cmd {
         Some("edit") => cmd_edit(taxfile_path_getter, user_cmd_runner),
 
@@ -75,6 +81,7 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
             content_handler,
             content_handler,
             user_cmd_runner,
+            task_formatter,
             args,
             true,
         ),
@@ -83,6 +90,7 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
             content_handler,
             content_handler,
             user_cmd_runner,
+            task_formatter,
             args,
             false,
         ),
@@ -92,6 +100,7 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
             content_handler,
             content_handler,
             user_cmd_runner,
+            task_formatter,
             args,
             true,
         ),
@@ -100,17 +109,22 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
             content_handler,
             content_handler,
             user_cmd_runner,
+            task_formatter,
             args,
             false,
         ),
 
-        Some("list") => cmd_list(outputer, content_handler),
-        Some("current") => cmd_current(outputer, content_handler, false),
-        Some("cycle") => cmd_current(outputer, content_handler, true),
+        Some("list") | Some("ls") => cmd_list(outputer, content_handler, task_formatter),
+        Some("current") => cmd_current(outputer, content_handler, task_formatter, false),
+        Some("cycle") => cmd_current(outputer, content_handler, task_formatter, true),
 
-        Some("prune") | Some("purge") => {
-            cmd_prune(outputer, content_handler, content_handler, user_cmd_runner)
-        }
+        Some("prune") | Some("purge") => cmd_prune(
+            outputer,
+            content_handler,
+            content_handler,
+            user_cmd_runner,
+            task_formatter,
+        ),
 
         Some("cat") | Some("view") => cmd_cat(outputer, content_handler),
 
@@ -121,6 +135,7 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
             content_handler,
             content_handler,
             user_cmd_runner,
+            task_formatter,
             args,
             cmd_add::AddPosition::Prepend,
         ),
@@ -130,11 +145,12 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
             content_handler,
             content_handler,
             user_cmd_runner,
+            task_formatter,
             args,
             cmd_add::AddPosition::Append,
         ),
 
-        None => cmd_list(outputer, content_handler), // default: list
+        None => cmd_list(outputer, content_handler, task_formatter), // default: list
         _ => Err(format!("Unknown command \"{}\"", cmd.unwrap())),
     }
 }

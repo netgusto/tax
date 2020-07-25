@@ -1,6 +1,6 @@
 use crate::cmd_list;
 use crate::model::Task;
-use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
+use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
 use crate::tasks::{add_line_in_contents, get_all_tasks};
 
 pub enum AddPosition {
@@ -13,6 +13,7 @@ pub fn cmd_add(
     content_getter: &dyn ContentGetter,
     content_setter: &dyn ContentSetter,
     user_cmd_runner: &dyn UserCmdRunner,
+    task_formatter: &TaskFormatter,
     args: Vec<String>,
     pos: AddPosition,
 ) -> Result<(), String> {
@@ -46,6 +47,7 @@ pub fn cmd_add(
 
     let new_task = Task {
         name: task_name.clone(),
+        plain_name: task_name.clone(),
         line: new_line,
         line_num: line_num,
         is_checked: false,
@@ -65,5 +67,5 @@ pub fn cmd_add(
         Err(e) => return Err(e),
     };
 
-    cmd_list(outputer, content_getter)
+    cmd_list(outputer, content_getter, task_formatter)
 }

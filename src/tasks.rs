@@ -53,7 +53,8 @@ pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, St
 
                 let is_focused = name.len() > 4 && TASK_NAME_FOCUSED_REGEX.is_match(&name);
                 tasks.push(Task {
-                    name: name,
+                    name: name.clone(),
+                    plain_name: if is_focused { remove_focus(name) } else { name },
                     num: task_num,
                     is_checked: is_check_symbol(check_symbol),
                     line_num: line_num,
@@ -94,10 +95,6 @@ pub fn get_focused_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<
 
 pub fn is_check_symbol(s: &str) -> bool {
     return s == "x";
-}
-
-pub fn format_numbered_task(task: &Task) -> String {
-    format!("[{}] {}", task.num, task.name)
 }
 
 pub fn toggle_line_completion(line: String, checked: bool) -> String {
@@ -159,12 +156,16 @@ pub fn toggle_line_focus(line: String, focused: bool) -> String {
             let replacement = if focused {
                 format!("**{}**", name)
             } else {
-                name.chars().take(name.len() - 2).skip(2).collect()
+                remove_focus(name)
             };
 
             format!("{}{}{}{}", &cap[1], &cap[2], &cap[3], replacement)
         }
     }
+}
+
+pub fn remove_focus(name: String) -> String {
+    name.chars().take(name.len() - 2).skip(2).collect()
 }
 
 pub fn remove_lines_in_contents(

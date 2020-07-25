@@ -18,7 +18,7 @@ tax is meant to offer basic operations to handle a task list from the CLI, optio
 
 ## Commands
 
-### tax | tax list
+### tax | tax list | tax ls
 
 Displays the current list of open tasks.
 
@@ -132,6 +132,16 @@ In your `tmux.conf`, for instance:
 set -g status-right '[...your status config...] #(/path/to/tax cycle)'
 ```
 
+## Color support
+
+If tax is running in the context of a TTY, it will emit ANSI escape sequences to display focused tasks in bold font, instead of markdown bold markup.
+
+If tax is not running in a TTY (for instance, in a shell `$PS1`), emitting ANSI escape sequences can be forced by setting the environment variable `CLICOLOR_FORCE=1`.
+
+You can disable all ANSI escape sequences by setting the environment variable `NO_COLOR=1`.
+
+Note: tmux status line does not interpret ANSI escape sequences (not a TTY).
+
 ### React to changes
 
 If `$TAX_CHANGE_CMD` is set in the environment and contains a valid command, tax will execute it as a `sh` command after every change it makes to your task file.
@@ -148,6 +158,7 @@ tax exposes a set of environment variables to `$TAX_CHANGE_CMD` to provide infor
 * **For commands add, check, uncheck, focus, blur (post-change values)**
   * `$TAX_TASK_NUM`: the number of the changed task in the task list (1-indexed)
   * `$TAX_TASK_NAME`: the name of the changed task
+  * `$TAX_TASK_PLAIN_NAME`: the plain name of the changed task (without focus markup if present)
   * `$TAX_TASK_LINE`: the complete markdown line of the changed task
   * `$TAX_TASK_LINE_NUM`: the line number of the changed task
   * `$TAX_TASK_CHECKED`: `1` if the task is completed, `0` otherwise

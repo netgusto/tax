@@ -1,10 +1,47 @@
 use crate::model::Task;
 
+use colored::*;
 use std::env;
 use std::fs::{self, File};
 use std::io::{prelude::*, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+pub struct TaskFormatter {
+    pub supports_colors: bool,
+}
+impl TaskFormatter {
+    pub fn display_numbered_task(&self, task: &Task) -> String {
+        format!(
+            "{} {}",
+            self.display_task_num(task),
+            self.display_task_name(task)
+        )
+    }
+
+    fn display_bold(&self, s: String) -> String {
+        if self.supports_colors {
+            s.clone().bold().to_string()
+        } else {
+            format!("**{}**", s)
+        }
+    }
+
+    pub fn display_task_name(&self, task: &Task) -> String {
+        if task.is_focused {
+            self.display_bold(task.plain_name.clone())
+        } else {
+            task.name.clone()
+        }
+    }
+    pub fn display_task_num(&self, task: &Task) -> String {
+        if task.is_focused && self.supports_colors {
+            format!("[{}]", self.display_bold(format!("{}", task.num)))
+        } else {
+            format!("[{}]", task.num)
+        }
+    }
+}
 
 pub trait StringOutputer {
     fn info(&mut self, s: String) -> ();
@@ -121,6 +158,7 @@ impl UserCmdRunner for UserCmdRunnerReal {
     fn env_single_task<'a>(&self, task: Task, cmd: &'a mut Command) -> &'a mut Command {
         cmd.env("TAX_TASK_NUM", format!("{}", task.num))
             .env("TAX_TASK_NAME", &task.name)
+            .env("TAX_TASK_PLAIN_NAME", &task.plain_name)
             .env("TAX_TASK_LINE", &task.line)
             .env("TAX_TASK_LINE_NUM", format!("{}", task.line_num))
             .env("TAX_TASK_CHECKED", if task.is_checked { "1" } else { "0" })
