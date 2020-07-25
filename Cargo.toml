@@ -1,6 +1,6 @@
 [package]
 name = "tax"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Jerome Schneider <mail@jeromeschneider.f>"]
 edition = "2018"
 license = "MIT"
