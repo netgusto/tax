@@ -132,6 +132,16 @@ In your `tmux.conf`, for instance:
 set -g status-right '[...your status config...] #(/path/to/tax cycle)'
 ```
 
+## Color support
+
+If tax is running in the context of a TTY, it will emit ANSI escape sequences to display focused tasks in bold font, instead of markdown bold markup.
+
+If tax is not running in a TTY (for instance, in a shell `$PS1`), emitting ANSI escape sequences can be forced by setting the environment variable `CLICOLOR_FORCE=1`.
+
+You can disable all ANSI escape sequences by setting the environment variable `NO_COLOR=1`.
+
+Note: tmux status line does not interpret ANSI escape sequences (not a TTY).
+
 ### React to changes
 
 If `$TAX_CHANGE_CMD` is set in the environment and contains a valid command, tax will execute it as a `sh` command after every change it makes to your task file.
