@@ -148,6 +148,7 @@ tax exposes a set of environment variables to `$TAX_CHANGE_CMD` to provide infor
 * **For commands add, check, uncheck, focus, blur (post-change values)**
   * `$TAX_TASK_NUM`: the number of the changed task in the task list (1-indexed)
   * `$TAX_TASK_NAME`: the name of the changed task
+  * `$TAX_TASK_PLAIN_NAME`: the plain name of the changed task (without focus markup if present)
   * `$TAX_TASK_LINE`: the complete markdown line of the changed task
   * `$TAX_TASK_LINE_NUM`: the line number of the changed task
   * `$TAX_TASK_CHECKED`: `1` if the task is completed, `0` otherwise

@@ -158,6 +158,7 @@ impl UserCmdRunner for UserCmdRunnerReal {
     fn env_single_task<'a>(&self, task: Task, cmd: &'a mut Command) -> &'a mut Command {
         cmd.env("TAX_TASK_NUM", format!("{}", task.num))
             .env("TAX_TASK_NAME", &task.name)
+            .env("TAX_TASK_PLAIN_NAME", &task.plain_name)
             .env("TAX_TASK_LINE", &task.line)
             .env("TAX_TASK_LINE_NUM", format!("{}", task.line_num))
             .env("TAX_TASK_CHECKED", if task.is_checked { "1" } else { "0" })
