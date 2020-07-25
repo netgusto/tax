@@ -1,5 +1,5 @@
 use crate::services::{ContentGetter, StringOutputer};
-use crate::tasks::get_current_task;
+use crate::tasks::{display_numbered_task, get_current_task};
 
 pub fn cmd_current(
     outputer: &mut dyn StringOutputer,
@@ -7,7 +7,7 @@ pub fn cmd_current(
     cycle: bool,
 ) -> Result<(), String> {
     match get_current_task(content_getter, cycle) {
-        Ok(Some(task)) => outputer.info(format!("[{}] {}", task.num, task.name)),
+        Ok(Some(task)) => outputer.info(display_numbered_task(&task)),
         _ => (),
     };
     Ok(())

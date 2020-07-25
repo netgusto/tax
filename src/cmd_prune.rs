@@ -1,5 +1,5 @@
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
-use crate::tasks::{format_numbered_task, get_closed_tasks, remove_lines_in_contents};
+use crate::tasks::{display_numbered_task, get_closed_tasks, remove_lines_in_contents};
 
 pub fn cmd_prune(
     outputer: &mut dyn StringOutputer,
@@ -28,7 +28,7 @@ pub fn cmd_prune(
     outputer.info(msg.clone());
 
     for task in &tasks {
-        outputer.info(format_numbered_task(&task))
+        outputer.info(display_numbered_task(&task))
     }
 
     match user_cmd_runner.build(String::from("prune"), String::from("PRUNE"), msg) {

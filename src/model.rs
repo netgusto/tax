@@ -2,6 +2,7 @@
 pub struct Task {
     pub num: usize,
     pub name: String,
+    pub plain_name: String,
     pub is_checked: bool,
     pub line_num: usize,
     pub line: String,

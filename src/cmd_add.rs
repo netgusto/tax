@@ -46,6 +46,7 @@ pub fn cmd_add(
 
     let new_task = Task {
         name: task_name.clone(),
+        plain_name: task_name.clone(),
         line: new_line,
         line_num: line_num,
         is_checked: false,

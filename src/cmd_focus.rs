@@ -1,7 +1,9 @@
 use crate::cmd_list::cmd_list;
 use crate::get_cmd_rank_arg;
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
-use crate::tasks::{get_all_tasks, replace_line_in_contents, toggle_line_focus};
+use crate::tasks::{
+    display_numbered_task, get_all_tasks, remove_focus, replace_line_in_contents, toggle_line_focus,
+};
 
 pub fn cmd_focus(
     outputer: &mut dyn StringOutputer,
@@ -25,23 +27,21 @@ pub fn cmd_focus(
 
     if task.is_checked {
         outputer.info(format!(
-            "Task is completed, cannot proceed: [{}] {}",
-            task.num, task.name
+            "Task is completed, cannot proceed: {}",
+            display_numbered_task(&task)
         ));
         return Ok(());
     }
 
     if focus && task.is_focused {
-        outputer.info(format!("Already focused: [{}] {}", task.num, task.name));
+        outputer.info(format!("Already focused: {}", display_numbered_task(&task)));
         return Ok(());
     } else if !focus && !task.is_focused {
-        outputer.info(format!("Already blured: [{}] {}", task.num, task.name));
+        outputer.info(format!("Already blured: {}", display_numbered_task(&task)));
         return Ok(());
     }
 
     let replacement_line = toggle_line_focus(task.line.clone(), focus);
-    let action = if focus { "Focused" } else { "Blurred" };
-    outputer.info(format!("{}: [{}] {}", action, task.num, task.name));
 
     let replaced_content =
         replace_line_in_contents(content_getter, task.line_num, replacement_line.clone())?;
@@ -51,6 +51,14 @@ pub fn cmd_focus(
     let mut updated_task = task.clone();
     updated_task.line = replacement_line;
     updated_task.is_focused = focus;
+    updated_task.name = remove_focus(task.name.clone());
+
+    let action = if focus { "Focused" } else { "Blurred" };
+    outputer.info(format!(
+        "{}: {}",
+        action,
+        display_numbered_task(&updated_task)
+    ));
 
     match user_cmd_runner.build(
         String::from("focus"),

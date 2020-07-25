@@ -1,5 +1,5 @@
 use crate::services::{ContentGetter, StringOutputer};
-use crate::tasks::{format_numbered_task, get_open_tasks};
+use crate::tasks::{display_numbered_task, get_open_tasks};
 
 pub fn cmd_list(
     outputer: &mut dyn StringOutputer,
@@ -7,7 +7,7 @@ pub fn cmd_list(
 ) -> Result<(), String> {
     let tasks = get_open_tasks(content_getter)?;
     for task in tasks {
-        outputer.info(format_numbered_task(&task))
+        outputer.info(display_numbered_task(&task))
     }
 
     Ok(())
