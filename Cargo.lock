@@ -199,7 +199,7 @@ dependencies = [
 
 [[package]]
 name = "tax"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "colored 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dirs 3.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
