@@ -46,6 +46,7 @@ impl crate::services::StringOutputer for StringOutputerMock {
 
 #[allow(dead_code)]
 pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
+    // FIXME: add test cases for comments
     (
         vec![
             String::from("# Not a task"),
@@ -66,6 +67,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 plain_name: String::from("Standard unchecked"),
                 is_checked: false,
                 is_focused: false,
+                comment: None,
             },
             crate::model::Task {
                 num: 2,
@@ -75,6 +77,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 plain_name: String::from("Collapsed unchecked"),
                 is_checked: false,
                 is_focused: false,
+                comment: None,
             },
             crate::model::Task {
                 num: 3,
@@ -84,6 +87,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 plain_name: String::from("Standard unchecked focused"),
                 is_checked: false,
                 is_focused: true,
+                comment: None,
             },
             crate::model::Task {
                 num: 4,
@@ -93,6 +97,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 plain_name: String::from("Star unchecked"),
                 is_checked: false,
                 is_focused: false,
+                comment: None,
             },
             crate::model::Task {
                 num: 5,
@@ -102,6 +107,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 plain_name: String::from("Checked"),
                 is_checked: true,
                 is_focused: false,
+                comment: None,
             },
             crate::model::Task {
                 num: 6,
@@ -111,6 +117,7 @@ pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
                 plain_name: String::from("Focused checked"),
                 is_checked: true,
                 is_focused: true,
+                comment: None,
             },
         ],
     )
