@@ -252,47 +252,16 @@ mod tests {
     use super::*;
     use crate::test_helpers::{get_std_test_contents, FileReaderMock};
 
-    // FIXME: task_to_markdown tests
-    // #[test]
-    // fn test_line_focus() {
-    //     assert_eq!(
-    //         toggle_line_focus(String::from("This is not a task line"), true),
-    //         String::from("This is not a task line")
-    //     );
+    #[test]
+    fn test_task_to_markdown() {
+        let (expected_markdown, tasks) = get_std_test_contents(true);
 
-    //     assert_eq!(
-    //         toggle_line_focus(String::from("* [] This is a task"), true),
-    //         String::from("* [] **This is a task**")
-    //     );
-
-    //     assert_eq!(
-    //         toggle_line_focus(String::from("- [ ] This is a task"), true),
-    //         String::from("- [ ] **This is a task**")
-    //     );
-
-    //     assert_eq!(
-    //         toggle_line_focus(String::from("- [x] **This is a task**"), true),
-    //         String::from("- [x] **This is a task**")
-    //     );
-    // }
-
-    // #[test]
-    // fn test_line_blur() {
-    //     assert_eq!(
-    //         toggle_line_focus(String::from("This is not a task line"), false),
-    //         String::from("This is not a task line")
-    //     );
-
-    //     assert_eq!(
-    //         toggle_line_focus(String::from("* [] This is a task"), false),
-    //         String::from("* [] This is a task")
-    //     );
-
-    //     assert_eq!(
-    //         toggle_line_focus(String::from("- [x] **This is a task**"), false),
-    //         String::from("- [x] This is a task")
-    //     );
-    // }
+        let mut i = 0;
+        for task in tasks {
+            assert_eq!(expected_markdown[i].clone(), task_to_markdown(&task));
+            i += 1;
+        }
+    }
 
     #[test]
     fn test_line_check() {
@@ -349,7 +318,7 @@ mod tests {
         }
 
         // Std contents
-        let (test_contents, expected_tasks) = get_std_test_contents();
+        let (test_contents, expected_tasks) = get_std_test_contents(false);
 
         match get_all_tasks(&FileReaderMock {
             outcome: Ok(test_contents),
@@ -370,7 +339,7 @@ mod tests {
         }
 
         // Std contents
-        let (test_contents, expected_tasks) = get_std_test_contents();
+        let (test_contents, expected_tasks) = get_std_test_contents(false);
 
         match get_open_tasks(&FileReaderMock {
             outcome: Ok(test_contents),
@@ -382,6 +351,8 @@ mod tests {
                     expected_tasks[1].clone(),
                     expected_tasks[2].clone(),
                     expected_tasks[3].clone(),
+                    expected_tasks[6].clone(),
+                    expected_tasks[7].clone(),
                 ]
             ),
             Err(e) => panic!(e),
@@ -399,12 +370,15 @@ mod tests {
         }
 
         // Std contents
-        let (test_contents, expected_tasks) = get_std_test_contents();
+        let (test_contents, expected_tasks) = get_std_test_contents(false);
 
         match get_focused_open_tasks(&FileReaderMock {
             outcome: Ok(test_contents),
         }) {
-            Ok(tasks) => assert_eq!(tasks, vec![expected_tasks[2].clone()]),
+            Ok(tasks) => assert_eq!(
+                tasks,
+                vec![expected_tasks[2].clone(), expected_tasks[7].clone()]
+            ),
             Err(e) => panic!(e),
         }
     }
@@ -423,7 +397,7 @@ mod tests {
         }
 
         // Std contents
-        let (test_contents, expected_tasks) = get_std_test_contents();
+        let (test_contents, expected_tasks) = get_std_test_contents(false);
 
         match get_current_task(
             &FileReaderMock {

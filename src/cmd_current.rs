@@ -39,7 +39,7 @@ mod tests {
         // Std contents
         {
             let outputer_mock = &mut StringOutputerMock::new();
-            let (test_contents, _) = get_std_test_contents();
+            let (test_contents, _) = get_std_test_contents(false);
             let content_getter_mock = &FileReaderMock {
                 outcome: Ok(test_contents),
             };
