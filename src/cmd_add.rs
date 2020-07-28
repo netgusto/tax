@@ -1,7 +1,7 @@
 use crate::cmd_list;
 use crate::model::Task;
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
-use crate::tasks::{add_line_in_contents, get_all_tasks};
+use crate::tasks::{add_line_in_contents, get_all_tasks, get_comment, is_focused, remove_focus};
 
 pub enum AddPosition {
     Append,
@@ -45,13 +45,22 @@ pub fn cmd_add(
 
     content_setter.set_contents(result)?;
 
+    let (name_without_comment, comment) = get_comment(task_name.as_str());
+    let is_task_focused = is_focused(name_without_comment.as_str());
+    let plain_name = if is_task_focused {
+        remove_focus(name_without_comment)
+    } else {
+        name_without_comment
+    };
+
     let new_task = Task {
         name: task_name.clone(),
-        plain_name: task_name.clone(),
+        plain_name: plain_name.clone(),
+        comment: comment,
         line: new_line,
         line_num: line_num,
         is_checked: false,
-        is_focused: false,
+        is_focused: is_task_focused,
         num: task_num,
     };
 

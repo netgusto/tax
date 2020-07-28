@@ -1,7 +1,7 @@
 use crate::cmd_list::cmd_list;
 use crate::get_cmd_rank_arg;
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
-use crate::tasks::{get_all_tasks, remove_focus, replace_line_in_contents, toggle_line_focus};
+use crate::tasks::{get_all_tasks, replace_line_in_contents, task_to_markdown};
 
 pub fn cmd_focus(
     outputer: &mut dyn StringOutputer,
@@ -46,17 +46,20 @@ pub fn cmd_focus(
         return Ok(());
     }
 
-    let replacement_line = toggle_line_focus(task.line.clone(), focus);
+    let mut updated_task = task.clone();
+    updated_task.is_focused = focus;
+    updated_task.name = if focus {
+        format!("**{}**", task.plain_name.clone())
+    } else {
+        task.plain_name.clone()
+    };
+
+    updated_task.line = task_to_markdown(&updated_task);
 
     let replaced_content =
-        replace_line_in_contents(content_getter, task.line_num, replacement_line.clone())?;
+        replace_line_in_contents(content_getter, task.line_num, updated_task.line.clone())?;
 
     let result = content_setter.set_contents(replaced_content);
-
-    let mut updated_task = task.clone();
-    updated_task.line = replacement_line;
-    updated_task.is_focused = focus;
-    updated_task.name = remove_focus(task.name.clone());
 
     let action = if focus { "Focused" } else { "Blurred" };
     outputer.info(format!(

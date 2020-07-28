@@ -47,7 +47,7 @@ mod tests {
             cmd_current(outputer_mock, content_getter_mock, &task_formatter, false).unwrap();
             assert_eq!(
                 outputer_mock.get_info(),
-                "[3] **Standard unchecked focused**\n"
+                "[2] **Standard unchecked focused**\n"
             );
         }
     }

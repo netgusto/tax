@@ -7,6 +7,7 @@ lazy_static! {
     static ref TASK_LINE_REGEX: Regex =
         Regex::new(r"(?m)^\s*(?:-|\*)\s+\[(x|\s*|>)\]\s+(.+?)$").unwrap();
     static ref TASK_NAME_FOCUSED_REGEX: Regex = Regex::new(r"(?m)\*\*.+\*\*").unwrap();
+    static ref COMMENT_REGEX: Regex = Regex::new(r"(?m)^(.*?)[^:]//(.+?)$").unwrap();
 }
 
 pub fn get_current_task(
@@ -38,6 +39,17 @@ pub fn get_current_task(
     Ok(Some(tasks[0].clone()))
 }
 
+pub fn get_comment(task_name: &str) -> (String, Option<String>) {
+    match COMMENT_REGEX.captures(task_name) {
+        None => (String::from(task_name), None),
+        Some(cap2) => (cap2[1].trim().to_string(), Some(cap2[2].trim().to_string())),
+    }
+}
+
+pub fn is_focused(task_name: &str) -> bool {
+    task_name.len() > 4 && TASK_NAME_FOCUSED_REGEX.is_match(task_name)
+}
+
 pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
     let mut tasks: Vec<Task> = Vec::new();
 
@@ -51,15 +63,22 @@ pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, St
                 let check_symbol = cap[1].trim();
                 let name = String::from(&cap[2]);
 
-                let is_focused = name.len() > 4 && TASK_NAME_FOCUSED_REGEX.is_match(&name);
+                let (name_without_comment, comment) = get_comment(name.as_str());
+
+                let is_task_focused = is_focused(name_without_comment.as_str());
                 tasks.push(Task {
-                    name: name.clone(),
-                    plain_name: if is_focused { remove_focus(name) } else { name },
+                    name: name_without_comment.clone(),
+                    plain_name: if is_task_focused {
+                        remove_focus(name_without_comment)
+                    } else {
+                        name_without_comment
+                    },
+                    comment: comment,
                     num: task_num,
                     is_checked: is_check_symbol(check_symbol),
                     line_num: line_num,
                     line: String::from(&cap[0]),
-                    is_focused: is_focused,
+                    is_focused: is_task_focused,
                 });
 
                 task_num += 1;
@@ -129,39 +148,21 @@ pub fn toggle_line_completion(line: String, checked: bool) -> String {
     re.replace_all(&line, replacement).into()
 }
 
-pub fn toggle_line_focus(line: String, focused: bool) -> String {
-    let re = Regex::new(
-        r"(?x)
-            ^(?P<prefix>\s*(?:-|\*)\s+)
-            (?P<checkbox>\[(?:\s*|x)])
-            (?P<spacing>\s+)
-            (?P<suffix>.+?)
-            $
-        ",
-    )
-    .unwrap();
-
-    match re.captures(line.as_str()) {
-        None => line,
-        Some(cap) => {
-            let name = String::from(&cap[4]);
-
-            let is_focused = TASK_NAME_FOCUSED_REGEX.is_match(&name);
-            if is_focused && focused {
-                return line;
-            } else if !is_focused && !focused {
-                return line;
-            }
-
-            let replacement = if focused {
-                format!("**{}**", name)
-            } else {
-                remove_focus(name)
-            };
-
-            format!("{}{}{}{}", &cap[1], &cap[2], &cap[3], replacement)
+pub fn task_to_markdown(task: &Task) -> String {
+    format!(
+        "- [{}] {}{}",
+        if task.is_checked { "x" } else { " " },
+        if task.is_focused {
+            format!("**{}**", task.plain_name)
+        } else {
+            task.plain_name.clone()
+        },
+        if task.comment != None {
+            format!(" // {}", task.comment.clone().unwrap())
+        } else {
+            String::from("")
         }
-    }
+    )
 }
 
 pub fn remove_focus(name: String) -> String {
@@ -249,47 +250,17 @@ pub fn add_line_in_contents(
 mod tests {
 
     use super::*;
-    use crate::test_helpers::{get_std_test_contents, FileReaderMock};
+    use crate::test_helpers::{get_std_test_contents, get_std_test_tasks, FileReaderMock};
 
     #[test]
-    fn test_line_focus() {
-        assert_eq!(
-            toggle_line_focus(String::from("This is not a task line"), true),
-            String::from("This is not a task line")
-        );
+    fn test_task_to_markdown() {
+        let (expected_markdown, tasks) = get_std_test_tasks();
 
-        assert_eq!(
-            toggle_line_focus(String::from("* [] This is a task"), true),
-            String::from("* [] **This is a task**")
-        );
-
-        assert_eq!(
-            toggle_line_focus(String::from("- [ ] This is a task"), true),
-            String::from("- [ ] **This is a task**")
-        );
-
-        assert_eq!(
-            toggle_line_focus(String::from("- [x] **This is a task**"), true),
-            String::from("- [x] **This is a task**")
-        );
-    }
-
-    #[test]
-    fn test_line_blur() {
-        assert_eq!(
-            toggle_line_focus(String::from("This is not a task line"), false),
-            String::from("This is not a task line")
-        );
-
-        assert_eq!(
-            toggle_line_focus(String::from("* [] This is a task"), false),
-            String::from("* [] This is a task")
-        );
-
-        assert_eq!(
-            toggle_line_focus(String::from("- [x] **This is a task**"), false),
-            String::from("- [x] This is a task")
-        );
+        let mut i = 0;
+        for task in tasks {
+            assert_eq!(expected_markdown[i].clone(), task_to_markdown(&task));
+            i += 1;
+        }
     }
 
     #[test]
@@ -378,8 +349,8 @@ mod tests {
                 vec![
                     expected_tasks[0].clone(),
                     expected_tasks[1].clone(),
-                    expected_tasks[2].clone(),
-                    expected_tasks[3].clone(),
+                    expected_tasks[4].clone(),
+                    expected_tasks[5].clone(),
                 ]
             ),
             Err(e) => panic!(e),
@@ -402,7 +373,10 @@ mod tests {
         match get_focused_open_tasks(&FileReaderMock {
             outcome: Ok(test_contents),
         }) {
-            Ok(tasks) => assert_eq!(tasks, vec![expected_tasks[2].clone()]),
+            Ok(tasks) => assert_eq!(
+                tasks,
+                vec![expected_tasks[1].clone(), expected_tasks[5].clone()]
+            ),
             Err(e) => panic!(e),
         }
     }
@@ -429,7 +403,7 @@ mod tests {
             },
             false,
         ) {
-            Ok(task) => assert_eq!(task, Some(expected_tasks[2].clone())),
+            Ok(task) => assert_eq!(task, Some(expected_tasks[1].clone())),
             Err(e) => panic!(e),
         }
     }

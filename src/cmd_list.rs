@@ -46,7 +46,7 @@ mod tests {
             cmd_list(outputer_mock, content_getter_mock, task_formatter).unwrap();
             assert_eq!(
                 outputer_mock.get_info(),
-                "[1] Standard unchecked\n[2] Collapsed unchecked\n[3] **Standard unchecked focused**\n[4] Star unchecked\n"
+                "[1] Standard unchecked\n[2] **Standard unchecked focused**\n[5] Standard unchecked\n[6] **Standard unchecked focused**\n"
             );
         }
     }
