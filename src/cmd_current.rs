@@ -39,7 +39,7 @@ mod tests {
         // Std contents
         {
             let outputer_mock = &mut StringOutputerMock::new();
-            let (test_contents, _) = get_std_test_contents(false);
+            let (test_contents, _) = get_std_test_contents();
             let content_getter_mock = &FileReaderMock {
                 outcome: Ok(test_contents),
             };
@@ -47,7 +47,7 @@ mod tests {
             cmd_current(outputer_mock, content_getter_mock, &task_formatter, false).unwrap();
             assert_eq!(
                 outputer_mock.get_info(),
-                "[3] **Standard unchecked focused**\n"
+                "[2] **Standard unchecked focused**\n"
             );
         }
     }

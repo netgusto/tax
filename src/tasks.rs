@@ -250,11 +250,11 @@ pub fn add_line_in_contents(
 mod tests {
 
     use super::*;
-    use crate::test_helpers::{get_std_test_contents, FileReaderMock};
+    use crate::test_helpers::{get_std_test_contents, get_std_test_tasks, FileReaderMock};
 
     #[test]
     fn test_task_to_markdown() {
-        let (expected_markdown, tasks) = get_std_test_contents(true);
+        let (expected_markdown, tasks) = get_std_test_tasks();
 
         let mut i = 0;
         for task in tasks {
@@ -318,7 +318,7 @@ mod tests {
         }
 
         // Std contents
-        let (test_contents, expected_tasks) = get_std_test_contents(false);
+        let (test_contents, expected_tasks) = get_std_test_contents();
 
         match get_all_tasks(&FileReaderMock {
             outcome: Ok(test_contents),
@@ -339,7 +339,7 @@ mod tests {
         }
 
         // Std contents
-        let (test_contents, expected_tasks) = get_std_test_contents(false);
+        let (test_contents, expected_tasks) = get_std_test_contents();
 
         match get_open_tasks(&FileReaderMock {
             outcome: Ok(test_contents),
@@ -349,10 +349,8 @@ mod tests {
                 vec![
                     expected_tasks[0].clone(),
                     expected_tasks[1].clone(),
-                    expected_tasks[2].clone(),
-                    expected_tasks[3].clone(),
-                    expected_tasks[6].clone(),
-                    expected_tasks[7].clone(),
+                    expected_tasks[4].clone(),
+                    expected_tasks[5].clone(),
                 ]
             ),
             Err(e) => panic!(e),
@@ -370,14 +368,14 @@ mod tests {
         }
 
         // Std contents
-        let (test_contents, expected_tasks) = get_std_test_contents(false);
+        let (test_contents, expected_tasks) = get_std_test_contents();
 
         match get_focused_open_tasks(&FileReaderMock {
             outcome: Ok(test_contents),
         }) {
             Ok(tasks) => assert_eq!(
                 tasks,
-                vec![expected_tasks[2].clone(), expected_tasks[7].clone()]
+                vec![expected_tasks[1].clone(), expected_tasks[5].clone()]
             ),
             Err(e) => panic!(e),
         }
@@ -397,7 +395,7 @@ mod tests {
         }
 
         // Std contents
-        let (test_contents, expected_tasks) = get_std_test_contents(false);
+        let (test_contents, expected_tasks) = get_std_test_contents();
 
         match get_current_task(
             &FileReaderMock {
@@ -405,7 +403,7 @@ mod tests {
             },
             false,
         ) {
-            Ok(task) => assert_eq!(task, Some(expected_tasks[2].clone())),
+            Ok(task) => assert_eq!(task, Some(expected_tasks[1].clone())),
             Err(e) => panic!(e),
         }
     }
