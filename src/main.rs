@@ -2,8 +2,7 @@
 extern crate lazy_static;
 extern crate dirs;
 
-use std::env;
-
+use clap::{crate_version, value_t, App, Arg, ArgMatches};
 use colored::control::SHOULD_COLORIZE;
 
 mod services;
@@ -44,16 +43,98 @@ mod cmd_add;
 use cmd_add::cmd_add;
 
 fn main() -> Result<(), String> {
-    run_app(env::args().collect())
+    let matches = App::new("Tax")
+        .version(crate_version!())
+        .about("CLI Task List Manager")
+        .subcommand(App::new("edit").about("Edit the current task list in $EDITOR"))
+        .subcommand(
+            App::new("focus").about("Focus the given task").arg(
+                Arg::with_name("task-index")
+                    .index(1)
+                    .required(true)
+                    .help("Number of the task to focus"),
+            ),
+        )
+        .subcommand(
+            App::new("blur")
+                .alias("unfocus")
+                .about("Blur the given task")
+                .arg(
+                    Arg::with_name("task-index")
+                        .index(1)
+                        .required(true)
+                        .help("Number of the task to blur"),
+                ),
+        )
+        .subcommand(
+            App::new("check")
+                .about("Mark the given task as completed")
+                .arg(
+                    Arg::with_name("task-index")
+                        .index(1)
+                        .required(true)
+                        .help("Number of the task to mark as completed"),
+                ),
+        )
+        .subcommand(
+            App::new("uncheck")
+                .about("Mark the given task as not completed")
+                .arg(
+                    Arg::with_name("task-index")
+                        .index(1)
+                        .required(true)
+                        .help("Number of the task to mark as not completed"),
+                ),
+        )
+        .subcommand(
+            App::new("list")
+                .alias("ls")
+                .about("Print all the tasks of the list, completed or not"),
+        )
+        .subcommand(
+            App::new("current").about("Print the first open (focused if any) task of the list"),
+        )
+        .subcommand(
+            App::new("cycle")
+                .about("Like current, but changes task every minute if no task is focused"),
+        )
+        .subcommand(
+            App::new("prune")
+                .alias("purge")
+                .about("Remove all completed tasks from the task list"),
+        )
+        .subcommand(App::new("cat").alias("view").about("Print the task file"))
+        .subcommand(App::new("which").about("Print the path to the current task list file"))
+        .subcommand(
+            App::new("add")
+                .alias("push")
+                .alias("prepend")
+                .about("Add the given task to the top of the task list")
+                .arg(
+                    Arg::with_name("task-name")
+                        .index(1)
+                        .required(true)
+                        .multiple(true)
+                        .help("Name of the task to add"),
+                ),
+        )
+        .subcommand(
+            App::new("append")
+                .about("Add the given task to the bottom of the task list")
+                .arg(
+                    Arg::with_name("task-name")
+                        .index(1)
+                        .required(true)
+                        .multiple(true)
+                        .help("Name of the task to add"),
+                ),
+        )
+        .get_matches();
+
+    run_app(matches)
 }
 
-fn run_app(args: Vec<String>) -> Result<(), String> {
-    let cmd: Option<&str> = if args.len() > 1 {
-        Some(args[1].as_str())
-    } else {
-        None
-    };
-
+fn run_app(matches: ArgMatches) -> Result<(), String> {
     let taxfile_path_getter = &TaxfilePathGetterReal {
         get_env: env_getter_real,
         get_home: home_getter_real,
@@ -73,52 +154,52 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
         supports_colors: SHOULD_COLORIZE.should_colorize(),
     };
 
-    match cmd {
-        Some("edit") => cmd_edit(taxfile_path_getter, user_cmd_runner),
-
-        Some("focus") => cmd_focus(
+    match matches.subcommand() {
+        (_, None) => cmd_list(outputer, content_handler, task_formatter),
+        ("edit", _) => cmd_edit(taxfile_path_getter, user_cmd_runner),
+        ("focus", Some(info)) => cmd_focus(
             outputer,
             content_handler,
             content_handler,
             user_cmd_runner,
             task_formatter,
-            args,
+            value_t!(info.value_of("task-index"), usize).unwrap(),
             true,
         ),
-        Some("blur") | Some("unfocus") => cmd_focus(
+        ("blur", Some(info)) => cmd_focus(
             outputer,
             content_handler,
             content_handler,
             user_cmd_runner,
             task_formatter,
-            args,
+            value_t!(info.value_of("task-index"), usize).unwrap(),
             false,
         ),
 
-        Some("check") => cmd_check(
+        ("check", Some(info)) => cmd_check(
             outputer,
             content_handler,
             content_handler,
             user_cmd_runner,
             task_formatter,
-            args,
+            value_t!(info.value_of("task-index"), usize).unwrap(),
             true,
         ),
-        Some("uncheck") => cmd_check(
+        ("uncheck", Some(info)) => cmd_check(
             outputer,
             content_handler,
             content_handler,
             user_cmd_runner,
             task_formatter,
-            args,
+            value_t!(info.value_of("task-index"), usize).unwrap(),
             false,
         ),
 
-        Some("list") | Some("ls") => cmd_list(outputer, content_handler, task_formatter),
-        Some("current") => cmd_current(outputer, content_handler, task_formatter, false),
-        Some("cycle") => cmd_current(outputer, content_handler, task_formatter, true),
+        ("list", _) => cmd_list(outputer, content_handler, task_formatter),
+        ("current", _) => cmd_current(outputer, content_handler, task_formatter, false),
+        ("cycle", _) => cmd_current(outputer, content_handler, task_formatter, true),
 
-        Some("prune") | Some("purge") => cmd_prune(
+        ("prune", _) => cmd_prune(
             outputer,
             content_handler,
             content_handler,
@@ -126,44 +207,29 @@ fn run_app(args: Vec<String>) -> Result<(), String> {
             task_formatter,
         ),
 
-        Some("cat") | Some("view") => cmd_cat(outputer, content_handler),
+        ("cat", _) => cmd_cat(outputer, content_handler),
 
-        Some("which") => cmd_which(outputer, taxfile_path_getter),
+        ("which", _) => cmd_which(outputer, taxfile_path_getter),
 
-        Some("add") | Some("push") | Some("prepend") => cmd_add(
+        ("add", Some(info)) => cmd_add(
             outputer,
             content_handler,
             content_handler,
             user_cmd_runner,
             task_formatter,
-            args,
+            info.values_of_lossy("task-name").unwrap(),
             cmd_add::AddPosition::Prepend,
         ),
 
-        Some("append") => cmd_add(
+        ("append", Some(info)) => cmd_add(
             outputer,
             content_handler,
             content_handler,
             user_cmd_runner,
             task_formatter,
-            args,
+            info.values_of_lossy("task-name").unwrap(),
             cmd_add::AddPosition::Append,
         ),
-
-        None => cmd_list(outputer, content_handler, task_formatter), // default: list
-        _ => Err(format!("Unknown command \"{}\"", cmd.unwrap())),
+        _ => Err(format!("Unknown command")),
     }
-}
-
-fn get_cmd_rank_arg(args: Vec<String>) -> Result<Option<usize>, String> {
-    if args.len() == 2 {
-        return Ok(None);
-    }
-
-    let rank_one_based = match str::parse::<usize>(args[2].as_str()) {
-        Ok(0) | Err(_) => return Err(format!("Invalid task rank \"{}\"", args[2])),
-        Ok(v) => v,
-    };
-
-    return Ok(Some(rank_one_based));
 }
