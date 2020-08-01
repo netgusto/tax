@@ -14,14 +14,9 @@ pub fn cmd_add(
     content_setter: &dyn ContentSetter,
     user_cmd_runner: &dyn UserCmdRunner,
     task_formatter: &TaskFormatter,
-    args: Vec<String>,
+    task_parts: Vec<String>,
     pos: AddPosition,
 ) -> Result<(), String> {
-    if args.len() < 3 {
-        return Err(String::from("Please specify a task"));
-    }
-
-    let task_parts: Vec<String> = args.iter().skip(2).map(|s| (*s).clone()).collect();
     let task_name = task_parts.clone().join(" ");
 
     let tasks = get_all_tasks(content_getter)?;

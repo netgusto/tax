@@ -1,5 +1,3 @@
-use crate::cmd_list::cmd_list;
-use crate::get_cmd_rank_arg;
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
 use crate::tasks::{get_all_tasks, replace_line_in_contents, task_to_markdown};
 
@@ -9,14 +7,9 @@ pub fn cmd_focus(
     content_setter: &dyn ContentSetter,
     user_cmd_runner: &dyn UserCmdRunner,
     task_formatter: &TaskFormatter,
-    args: Vec<String>,
+    rank_one_based: usize,
     focus: bool,
 ) -> Result<(), String> {
-    let rank_one_based = match get_cmd_rank_arg(args)? {
-        None => return cmd_list(outputer, content_getter, task_formatter),
-        Some(rank) => rank,
-    };
-
     let tasks = get_all_tasks(content_getter)?;
     if rank_one_based > tasks.len() {
         return Err(format!("Non existent task {}", rank_one_based));
