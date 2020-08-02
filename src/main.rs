@@ -90,12 +90,12 @@ fn get_arg_matches() -> ArgMatches<'static> {
                 .about("Remove all completed tasks from the task list"),
         )
         .subcommand(App::new("cat").alias("view").about("Print the task file"))
-        .subcommand(App::new("which").about("Print the path to the current task list file"))
+        .subcommand(App::new("which").about("Print the path of the current task list file"))
         .subcommand(
             App::new("add")
                 .alias("push")
                 .alias("prepend")
-                .about("Add the given task to the top of the task list")
+                .about("Add the given task at the top of the task list")
                 .arg(
                     Arg::with_name("task-name")
                         .index(1)
@@ -106,7 +106,7 @@ fn get_arg_matches() -> ArgMatches<'static> {
         )
         .subcommand(
             App::new("append")
-                .about("Add the given task to the bottom of the task list")
+                .about("Add the given task at the bottom of the task list")
                 .arg(
                     Arg::with_name("task-name")
                         .index(1)
