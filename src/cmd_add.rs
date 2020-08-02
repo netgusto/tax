@@ -2,7 +2,8 @@ use crate::cmd_list;
 use crate::model::Task;
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
 use crate::tasks::{
-    get_all_tasks, text_add_line_in_contents, text_get_comment, text_is_focused, text_remove_focus,
+    get_all_tasks, task_to_markdown, text_add_line_in_contents, text_get_comment, text_is_focused,
+    text_remove_focus,
 };
 
 pub enum AddPosition {
@@ -36,12 +37,6 @@ pub fn cmd(
         }
     };
 
-    let new_line = format!("- [ ] {}", task_name);
-
-    let result = text_add_line_in_contents(content_getter, line_num, new_line.clone())?;
-
-    content_setter.set_contents(result)?;
-
     let (name_without_comment, comment) = text_get_comment(task_name.as_str());
     let is_task_focused = text_is_focused(name_without_comment.as_str());
     let plain_name = if is_task_focused {
@@ -50,16 +45,20 @@ pub fn cmd(
         name_without_comment
     };
 
-    let new_task = Task {
+    let mut new_task = Task {
         name: task_name.clone(),
         plain_name: plain_name.clone(),
         comment: comment,
-        line: new_line,
+        line: String::from(""),
         line_num: line_num,
         is_checked: false,
         is_focused: is_task_focused,
         num: task_num,
     };
+
+    new_task.line = task_to_markdown(&new_task);
+    let result = text_add_line_in_contents(content_getter, line_num, new_task.line.clone())?;
+    content_setter.set_contents(result)?;
 
     match user_cmd_runner.build(
         String::from("add"),
