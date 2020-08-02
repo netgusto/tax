@@ -39,17 +39,6 @@ pub fn get_current_task(
     Ok(Some(tasks[0].clone()))
 }
 
-pub fn get_comment(task_name: &str) -> (String, Option<String>) {
-    match COMMENT_REGEX.captures(task_name) {
-        None => (String::from(task_name), None),
-        Some(cap2) => (cap2[1].trim().to_string(), Some(cap2[2].trim().to_string())),
-    }
-}
-
-pub fn is_focused(task_name: &str) -> bool {
-    task_name.len() > 4 && TASK_NAME_FOCUSED_REGEX.is_match(task_name)
-}
-
 pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
     let mut tasks: Vec<Task> = Vec::new();
 
@@ -63,19 +52,19 @@ pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, St
                 let check_symbol = cap[1].trim();
                 let name = String::from(&cap[2]);
 
-                let (name_without_comment, comment) = get_comment(name.as_str());
+                let (name_without_comment, comment) = text_get_comment(name.as_str());
 
-                let is_task_focused = is_focused(name_without_comment.as_str());
+                let is_task_focused = text_is_focused(name_without_comment.as_str());
                 tasks.push(Task {
                     name: name_without_comment.clone(),
                     plain_name: if is_task_focused {
-                        remove_focus(name_without_comment)
+                        text_remove_focus(name_without_comment.as_str())
                     } else {
                         name_without_comment
                     },
                     comment: comment,
                     num: task_num,
-                    is_checked: is_check_symbol(check_symbol),
+                    is_checked: text_is_check_symbol(check_symbol),
                     line_num: line_num,
                     line: String::from(&cap[0]),
                     is_focused: is_task_focused,
@@ -112,40 +101,8 @@ pub fn get_focused_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<
         .collect())
 }
 
-pub fn is_check_symbol(s: &str) -> bool {
+pub fn text_is_check_symbol(s: &str) -> bool {
     return s == "x";
-}
-
-pub fn toggle_line_completion(line: String, checked: bool) -> String {
-    let (re, replacement) = if checked {
-        (
-            Regex::new(
-                r"(?x)
-                    ^(?P<prefix>\s*(?:-|\*)\s+)
-                    (?P<checkbox>\[\s*])
-                    (?P<suffix>.+?)
-                    $
-                ",
-            )
-            .unwrap(),
-            "$prefix[x]$suffix",
-        )
-    } else {
-        (
-            Regex::new(
-                r"(?x)
-                    ^(?P<prefix>\s*(?:-|\*)\s+)
-                    (?P<checkbox>\[x])
-                    (?P<suffix>.+?)
-                    $
-                ",
-            )
-            .unwrap(),
-            "$prefix[ ]$suffix",
-        )
-    };
-
-    re.replace_all(&line, replacement).into()
 }
 
 pub fn task_to_markdown(task: &Task) -> String {
@@ -153,7 +110,7 @@ pub fn task_to_markdown(task: &Task) -> String {
         "- [{}] {}{}",
         if task.is_checked { "x" } else { " " },
         if task.is_focused {
-            format!("**{}**", task.plain_name)
+            text_add_focus(&task.plain_name)
         } else {
             task.plain_name.clone()
         },
@@ -165,11 +122,26 @@ pub fn task_to_markdown(task: &Task) -> String {
     )
 }
 
-pub fn remove_focus(name: String) -> String {
+pub fn text_add_focus(name: &str) -> String {
+    format!("**{}**", name)
+}
+
+pub fn text_remove_focus(name: &str) -> String {
     name.chars().take(name.len() - 2).skip(2).collect()
 }
 
-pub fn remove_lines_in_contents(
+pub fn text_is_focused(task_name: &str) -> bool {
+    task_name.len() > 4 && TASK_NAME_FOCUSED_REGEX.is_match(task_name)
+}
+
+pub fn text_get_comment(task_name: &str) -> (String, Option<String>) {
+    match COMMENT_REGEX.captures(task_name) {
+        None => (String::from(task_name), None),
+        Some(cap2) => (cap2[1].trim().to_string(), Some(cap2[2].trim().to_string())),
+    }
+}
+
+pub fn text_remove_lines_in_contents(
     content_getter: &dyn ContentGetter,
     line_nums: Vec<usize>,
 ) -> Result<String, String> {
@@ -195,7 +167,7 @@ pub fn remove_lines_in_contents(
     Ok(content)
 }
 
-pub fn replace_line_in_contents(
+pub fn text_replace_line_in_contents(
     content_getter: &dyn ContentGetter,
     replace_line_num: usize,
     replacement_line: String,
@@ -216,7 +188,8 @@ pub fn replace_line_in_contents(
 
     Ok(content)
 }
-pub fn add_line_in_contents(
+
+pub fn text_add_line_in_contents(
     content_getter: &dyn ContentGetter,
     add_line_num: usize,
     added_line: String,
@@ -264,47 +237,11 @@ mod tests {
     }
 
     #[test]
-    fn test_line_check() {
-        assert_eq!(
-            toggle_line_completion(String::from("This is not a task line"), true),
-            String::from("This is not a task line")
-        );
-
-        assert_eq!(
-            toggle_line_completion(String::from("* [] This is a task"), true),
-            String::from("* [x] This is a task")
-        );
-
-        assert_eq!(
-            toggle_line_completion(String::from("- [ ] **This is a task**"), true),
-            String::from("- [x] **This is a task**")
-        );
-    }
-
-    #[test]
-    fn test_line_uncheck() {
-        assert_eq!(
-            toggle_line_completion(String::from("This is not a task line"), false),
-            String::from("This is not a task line")
-        );
-
-        assert_eq!(
-            toggle_line_completion(String::from("* [] This is a task"), false),
-            String::from("* [] This is a task")
-        );
-
-        assert_eq!(
-            toggle_line_completion(String::from("- [x] **This is a task**"), false),
-            String::from("- [ ] **This is a task**")
-        );
-    }
-
-    #[test]
     fn test_is_check_symbol() {
-        assert_eq!(is_check_symbol(""), false);
-        assert_eq!(is_check_symbol("*"), false);
-        assert_eq!(is_check_symbol("x"), true);
-        assert_eq!(is_check_symbol("X"), false);
+        assert_eq!(text_is_check_symbol(""), false);
+        assert_eq!(text_is_check_symbol("*"), false);
+        assert_eq!(text_is_check_symbol("x"), true);
+        assert_eq!(text_is_check_symbol("X"), false);
     }
 
     #[test]

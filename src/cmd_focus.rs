@@ -1,5 +1,7 @@
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
-use crate::tasks::{get_all_tasks, replace_line_in_contents, task_to_markdown};
+use crate::tasks::{
+    get_all_tasks, task_to_markdown, text_add_focus, text_replace_line_in_contents,
+};
 
 pub fn cmd(
     outputer: &mut dyn StringOutputer,
@@ -42,7 +44,7 @@ pub fn cmd(
     let mut updated_task = task.clone();
     updated_task.is_focused = focus;
     updated_task.name = if focus {
-        format!("**{}**", task.plain_name.clone())
+        text_add_focus(task.plain_name.as_str())
     } else {
         task.plain_name.clone()
     };
@@ -50,7 +52,7 @@ pub fn cmd(
     updated_task.line = task_to_markdown(&updated_task);
 
     let replaced_content =
-        replace_line_in_contents(content_getter, task.line_num, updated_task.line.clone())?;
+        text_replace_line_in_contents(content_getter, task.line_num, updated_task.line.clone())?;
 
     let result = content_setter.set_contents(replaced_content);
 
