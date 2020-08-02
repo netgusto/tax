@@ -1,4 +1,4 @@
-# tax, the CLI Task List [![CircleCI](https://circleci.com/gh/netgusto/tax.svg?style=svg)](https://circleci.com/gh/netgusto/tax)
+# tax, CLI Task List Manager [![CircleCI](https://circleci.com/gh/netgusto/tax.svg?style=svg)](https://circleci.com/gh/netgusto/tax)
 
 Displays / manages the tasks in `~/tasks.md`, or from the file pointed by `$TAX_FILE` if set.
 
@@ -15,6 +15,49 @@ Tasks are markdown:
 tax is meant to offer basic operations to handle a task list from the CLI, optionally displaying the tasks one at a time on your bash prompt and your tmux status line.
 
 ![](assets/overview.png)
+
+## Format
+
+### Task
+
+Tasks are single text lines.
+
+Open tasks are with prefixed with `- [ ]`. Completed tasks are prefixed with `- [x]`.
+
+```markdown
+- [ ] This is an open task
+- [x] This is a completed task
+```
+
+### Comment in task
+
+Tasks can have comments. This is useful to keep task name short while retaining the ability to provide detailed information.
+
+```markdown
+- [ ] Do this thing // this a comment; see http://example.com/issue/#555
+```
+
+The comment is signaled by `//`, except when immediately preceded by `:`. This is so that URLS can be included in tasks without being parsed as comments.
+
+For instance, this tasks does not have a comment:
+
+```markdown
+- [ ] http://github.com/tax/issues
+```
+
+### Focused task
+
+Tasks in bold markup are focused. They will be displayed with priority over non focused tasks when a subset of the task list is displayed.
+
+```markdown
+- [ ] **This is a focused task**
+```
+
+Focused tasks can have a comment; in that case, only the task name is focused, not the comment
+
+```markdown
+- [ ] **This is a focused task** // with a comment, outside of the focus
+```
 
 ## Commands
 
