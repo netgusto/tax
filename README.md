@@ -31,15 +31,15 @@ Open tasks are with prefixed with `- [ ]`. Completed tasks are prefixed with `- 
 
 ### Comment in task
 
-Tasks can have comments. This is useful to keep task name short while retaining the ability to provide detailed information.
+Tasks can have comments. This is useful to keep the task name short while providing detailed information.
 
 ```markdown
 - [ ] Do this thing // this a comment; see http://example.com/issue/#555
 ```
 
-The comment is signaled by `//`, except when immediately preceded by `:`. This is so that URLS can be included in tasks without being parsed as comments.
+A comment is signaled by `//`, except when immediately preceded by `:`. That way, URLS can be included in tasks without being parsed as comments.
 
-For instance, this tasks does not have a comment:
+For instance, this task does not have a comment:
 
 ```markdown
 - [ ] http://github.com/tax/issues
