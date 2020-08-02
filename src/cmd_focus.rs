@@ -1,7 +1,7 @@
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
 use crate::tasks::{get_all_tasks, replace_line_in_contents, task_to_markdown};
 
-pub fn cmd_focus(
+pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     content_setter: &dyn ContentSetter,

@@ -1,7 +1,7 @@
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
 use crate::tasks::{get_all_tasks, replace_line_in_contents, toggle_line_completion};
 
-pub fn cmd_check(
+pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     content_setter: &dyn ContentSetter,
