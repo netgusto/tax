@@ -1,7 +1,9 @@
 use crate::cmd_list;
 use crate::model::Task;
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
-use crate::tasks::{add_line_in_contents, get_all_tasks, get_comment, is_focused, remove_focus};
+use crate::tasks::{
+    get_all_tasks, text_add_line_in_contents, text_get_comment, text_is_focused, text_remove_focus,
+};
 
 pub enum AddPosition {
     Append,
@@ -17,7 +19,7 @@ pub fn cmd(
     task_parts: Vec<String>,
     pos: AddPosition,
 ) -> Result<(), String> {
-    let task_name = task_parts.clone().join(" ");
+    let task_name = task_parts.join(" ");
 
     let tasks = get_all_tasks(content_getter)?;
 
@@ -36,14 +38,14 @@ pub fn cmd(
 
     let new_line = format!("- [ ] {}", task_name);
 
-    let result = add_line_in_contents(content_getter, line_num, new_line.clone())?;
+    let result = text_add_line_in_contents(content_getter, line_num, new_line.clone())?;
 
     content_setter.set_contents(result)?;
 
-    let (name_without_comment, comment) = get_comment(task_name.as_str());
-    let is_task_focused = is_focused(name_without_comment.as_str());
+    let (name_without_comment, comment) = text_get_comment(task_name.as_str());
+    let is_task_focused = text_is_focused(name_without_comment.as_str());
     let plain_name = if is_task_focused {
-        remove_focus(name_without_comment)
+        text_remove_focus(name_without_comment.as_str())
     } else {
         name_without_comment
     };

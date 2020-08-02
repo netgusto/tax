@@ -1,5 +1,5 @@
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
-use crate::tasks::{get_closed_tasks, remove_lines_in_contents};
+use crate::tasks::{get_closed_tasks, text_remove_lines_in_contents};
 
 pub fn cmd(
     outputer: &mut dyn StringOutputer,
@@ -16,7 +16,7 @@ pub fn cmd(
     }
 
     let line_nums: Vec<usize> = (&tasks).into_iter().map(|t| t.line_num).collect();
-    let pruned_content = remove_lines_in_contents(content_getter, line_nums)?;
+    let pruned_content = text_remove_lines_in_contents(content_getter, line_nums)?;
 
     content_setter.set_contents(pruned_content)?;
 
