@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate lazy_static;
-extern crate dirs;
 
 use clap::{crate_version, value_t, App, Arg, ArgMatches};
 use colored::control::SHOULD_COLORIZE;
@@ -15,35 +14,22 @@ mod model;
 mod tasks;
 mod test_helpers;
 
-mod cmd_current;
-use cmd_current::cmd_current;
-
-mod cmd_edit;
-use cmd_edit::cmd_edit;
-
-mod cmd_list;
-use cmd_list::cmd_list;
-
-mod cmd_focus;
-use cmd_focus::cmd_focus;
-
-mod cmd_check;
-use cmd_check::cmd_check;
-
-mod cmd_prune;
-use cmd_prune::cmd_prune;
-
-mod cmd_cat;
-use cmd_cat::cmd_cat;
-
-mod cmd_which;
-use cmd_which::cmd_which;
-
 mod cmd_add;
-use cmd_add::cmd_add;
+mod cmd_cat;
+mod cmd_check;
+mod cmd_current;
+mod cmd_edit;
+mod cmd_focus;
+mod cmd_list;
+mod cmd_prune;
+mod cmd_which;
 
 fn main() -> Result<(), String> {
-    let matches = App::new("Tax")
+    run_app(get_arg_matches())
+}
+
+fn get_arg_matches() -> ArgMatches<'static> {
+    App::new("Tax")
         .version(crate_version!())
         .about("CLI Task List Manager")
         .subcommand(App::new("edit").about("Edit the current task list in $EDITOR"))
@@ -129,9 +115,7 @@ fn main() -> Result<(), String> {
                         .help("Name of the task to add"),
                 ),
         )
-        .get_matches();
-
-    run_app(matches)
+        .get_matches()
 }
 
 fn run_app(matches: ArgMatches) -> Result<(), String> {
@@ -155,9 +139,9 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
     };
 
     match matches.subcommand() {
-        (_, None) => cmd_list(outputer, content_handler, task_formatter),
-        ("edit", _) => cmd_edit(taxfile_path_getter, user_cmd_runner),
-        ("focus", Some(info)) => cmd_focus(
+        (_, None) => cmd_list::cmd(outputer, content_handler, task_formatter),
+        ("edit", _) => cmd_edit::cmd(taxfile_path_getter, user_cmd_runner),
+        ("focus", Some(info)) => cmd_focus::cmd(
             outputer,
             content_handler,
             content_handler,
@@ -166,7 +150,7 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             value_t!(info.value_of("task-index"), usize).unwrap(),
             true,
         ),
-        ("blur", Some(info)) => cmd_focus(
+        ("blur", Some(info)) => cmd_focus::cmd(
             outputer,
             content_handler,
             content_handler,
@@ -176,7 +160,7 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             false,
         ),
 
-        ("check", Some(info)) => cmd_check(
+        ("check", Some(info)) => cmd_check::cmd(
             outputer,
             content_handler,
             content_handler,
@@ -185,7 +169,7 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             value_t!(info.value_of("task-index"), usize).unwrap(),
             true,
         ),
-        ("uncheck", Some(info)) => cmd_check(
+        ("uncheck", Some(info)) => cmd_check::cmd(
             outputer,
             content_handler,
             content_handler,
@@ -195,11 +179,11 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             false,
         ),
 
-        ("list", _) => cmd_list(outputer, content_handler, task_formatter),
-        ("current", _) => cmd_current(outputer, content_handler, task_formatter, false),
-        ("cycle", _) => cmd_current(outputer, content_handler, task_formatter, true),
+        ("list", _) => cmd_list::cmd(outputer, content_handler, task_formatter),
+        ("current", _) => cmd_current::cmd(outputer, content_handler, task_formatter, false),
+        ("cycle", _) => cmd_current::cmd(outputer, content_handler, task_formatter, true),
 
-        ("prune", _) => cmd_prune(
+        ("prune", _) => cmd_prune::cmd(
             outputer,
             content_handler,
             content_handler,
@@ -207,11 +191,11 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             task_formatter,
         ),
 
-        ("cat", _) => cmd_cat(outputer, content_handler),
+        ("cat", _) => cmd_cat::cmd(outputer, content_handler),
 
-        ("which", _) => cmd_which(outputer, taxfile_path_getter),
+        ("which", _) => cmd_which::cmd(outputer, taxfile_path_getter),
 
-        ("add", Some(info)) => cmd_add(
+        ("add", Some(info)) => cmd_add::cmd(
             outputer,
             content_handler,
             content_handler,
@@ -221,7 +205,7 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             cmd_add::AddPosition::Prepend,
         ),
 
-        ("append", Some(info)) => cmd_add(
+        ("append", Some(info)) => cmd_add::cmd(
             outputer,
             content_handler,
             content_handler,

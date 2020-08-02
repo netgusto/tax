@@ -8,7 +8,7 @@ pub enum AddPosition {
     Prepend,
 }
 
-pub fn cmd_add(
+pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     content_setter: &dyn ContentSetter,
@@ -71,5 +71,5 @@ pub fn cmd_add(
         Err(e) => return Err(e),
     };
 
-    cmd_list(outputer, content_getter, task_formatter)
+    cmd_list::cmd(outputer, content_getter, task_formatter)
 }

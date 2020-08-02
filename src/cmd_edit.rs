@@ -2,7 +2,7 @@ use crate::services::{TaxfilePathGetter, UserCmdRunner};
 use std::env;
 use std::process::Command;
 
-pub fn cmd_edit(
+pub fn cmd(
     taxfile_path_getter: &dyn TaxfilePathGetter,
     user_cmd_runner: &dyn UserCmdRunner,
 ) -> Result<(), String> {

@@ -1,6 +1,6 @@
 use crate::services::{ContentGetter, StringOutputer};
 
-pub fn cmd_cat(
+pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
 ) -> Result<(), String> {

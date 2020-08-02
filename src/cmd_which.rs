@@ -1,6 +1,6 @@
 use crate::services::{StringOutputer, TaxfilePathGetter};
 
-pub fn cmd_which(
+pub fn cmd(
     outputer: &mut dyn StringOutputer,
     taxfile_path_getter: &dyn TaxfilePathGetter,
 ) -> Result<(), String> {

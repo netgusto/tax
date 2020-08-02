@@ -1,7 +1,7 @@
 use crate::services::{ContentGetter, StringOutputer, TaskFormatter};
 use crate::tasks::get_open_tasks;
 
-pub fn cmd_list(
+pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     task_formatter: &TaskFormatter,
@@ -31,7 +31,7 @@ mod tests {
                 outcome: Ok(Vec::new()),
             };
 
-            cmd_list(outputer_mock, content_getter_mock, task_formatter).unwrap();
+            cmd(outputer_mock, content_getter_mock, task_formatter).unwrap();
             assert_eq!(outputer_mock.get_info(), "");
         }
 
@@ -43,7 +43,7 @@ mod tests {
                 outcome: Ok(test_contents),
             };
 
-            cmd_list(outputer_mock, content_getter_mock, task_formatter).unwrap();
+            cmd(outputer_mock, content_getter_mock, task_formatter).unwrap();
             assert_eq!(
                 outputer_mock.get_info(),
                 "[1] Standard unchecked\n[2] **Standard unchecked focused**\n[5] Standard unchecked\n[6] **Standard unchecked focused**\n"
