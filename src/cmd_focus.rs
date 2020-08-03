@@ -6,13 +6,13 @@ use crate::tasks::{
 pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
-    content_setter: &dyn ContentSetter,
+    content_setter: &mut dyn ContentSetter,
     user_cmd_runner: &dyn UserCmdRunner,
     task_formatter: &TaskFormatter,
     rank_one_based: usize,
     focus: bool,
 ) -> Result<(), String> {
-    let tasks = get_all_tasks(content_getter)?;
+    let (tasks, _) = get_all_tasks(content_getter)?;
     if rank_one_based > tasks.len() {
         return Err(format!("Non existent task {}", rank_one_based));
     }

@@ -11,11 +11,22 @@ pub struct TaskFormatter {
     pub supports_colors: bool,
 }
 impl TaskFormatter {
+    #[allow(dead_code)]
+    pub fn new(supports_colors: bool) -> Self {
+        TaskFormatter {
+            supports_colors: supports_colors,
+        }
+    }
+
     pub fn display_numbered_task(&self, task: &Task) -> String {
         format!(
             "{} {}",
             self.display_task_num(task),
-            self.display_task_name(task)
+            self.display_task_name(task),
+            // match &task.section {
+            //     Some(rc) => rc.name.clone(),
+            //     None => String::from(""),
+            // },
         )
     }
 
@@ -126,11 +137,11 @@ impl ContentGetter for ContentHandlerReal {
 }
 
 pub trait ContentSetter {
-    fn set_contents(&self, contents: String) -> Result<(), String>;
+    fn set_contents(&mut self, contents: String) -> Result<(), String>;
 }
 
 impl ContentSetter for ContentHandlerReal {
-    fn set_contents(&self, contents: String) -> Result<(), String> {
+    fn set_contents(&mut self, contents: String) -> Result<(), String> {
         match fs::write(&self.path, contents) {
             Ok(_) => Ok(()),
             Err(_) => Err(String::from("Unable to write file")),
@@ -224,7 +235,7 @@ fn get_env_var_if_not_empty(name: &str, get_env: EnvGetter) -> Option<String> {
 mod tests {
 
     use super::*;
-    use crate::test_helpers::{env_getter_none, env_getter_taxfile, home_getter_guybrush};
+    use crate::test_helpers::test::{env_getter_none, env_getter_taxfile, home_getter_guybrush};
 
     #[test]
     fn test_taxfile_path_getter_real() {

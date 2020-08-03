@@ -4,11 +4,11 @@ use crate::tasks::{get_closed_tasks, text_remove_lines_in_contents};
 pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
-    content_setter: &dyn ContentSetter,
+    content_setter: &mut dyn ContentSetter,
     user_cmd_runner: &dyn UserCmdRunner,
     task_formatter: &TaskFormatter,
 ) -> Result<(), String> {
-    let tasks = get_closed_tasks(content_getter)?;
+    let (tasks, _) = get_closed_tasks(content_getter)?;
 
     if tasks.len() == 0 {
         outputer.info("No task to prune".to_string());

@@ -130,7 +130,11 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
     };
 
     let file_path = taxfile_path_getter.get_taxfile_path()?;
-    let content_handler = &ContentHandlerReal { path: file_path };
+
+    let content_handler_ref = &ContentHandlerReal {
+        path: file_path.clone(),
+    };
+    let content_handler_mutref = &mut ContentHandlerReal { path: file_path };
 
     let outputer = &mut StringOutputerReal {};
 
@@ -139,12 +143,12 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
     };
 
     match matches.subcommand() {
-        (_, None) => cmd_list::cmd(outputer, content_handler, task_formatter),
+        (_, None) => cmd_list::cmd(outputer, content_handler_ref, task_formatter),
         ("edit", _) => cmd_edit::cmd(taxfile_path_getter, user_cmd_runner),
         ("focus", Some(info)) => cmd_focus::cmd(
             outputer,
-            content_handler,
-            content_handler,
+            content_handler_ref,
+            content_handler_mutref,
             user_cmd_runner,
             task_formatter,
             value_t!(info.value_of("task-index"), usize).unwrap(),
@@ -152,8 +156,8 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
         ),
         ("blur", Some(info)) => cmd_focus::cmd(
             outputer,
-            content_handler,
-            content_handler,
+            content_handler_ref,
+            content_handler_mutref,
             user_cmd_runner,
             task_formatter,
             value_t!(info.value_of("task-index"), usize).unwrap(),
@@ -162,8 +166,8 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
 
         ("check", Some(info)) => cmd_check::cmd(
             outputer,
-            content_handler,
-            content_handler,
+            content_handler_ref,
+            content_handler_mutref,
             user_cmd_runner,
             task_formatter,
             value_t!(info.value_of("task-index"), usize).unwrap(),
@@ -171,34 +175,34 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
         ),
         ("uncheck", Some(info)) => cmd_check::cmd(
             outputer,
-            content_handler,
-            content_handler,
+            content_handler_ref,
+            content_handler_mutref,
             user_cmd_runner,
             task_formatter,
             value_t!(info.value_of("task-index"), usize).unwrap(),
             false,
         ),
 
-        ("list", _) => cmd_list::cmd(outputer, content_handler, task_formatter),
-        ("current", _) => cmd_current::cmd(outputer, content_handler, task_formatter, false),
-        ("cycle", _) => cmd_current::cmd(outputer, content_handler, task_formatter, true),
+        ("list", _) => cmd_list::cmd(outputer, content_handler_ref, task_formatter),
+        ("current", _) => cmd_current::cmd(outputer, content_handler_ref, task_formatter, false),
+        ("cycle", _) => cmd_current::cmd(outputer, content_handler_ref, task_formatter, true),
 
         ("prune", _) => cmd_prune::cmd(
             outputer,
-            content_handler,
-            content_handler,
+            content_handler_ref,
+            content_handler_mutref,
             user_cmd_runner,
             task_formatter,
         ),
 
-        ("cat", _) => cmd_cat::cmd(outputer, content_handler),
+        ("cat", _) => cmd_cat::cmd(outputer, content_handler_ref),
 
         ("which", _) => cmd_which::cmd(outputer, taxfile_path_getter),
 
         ("add", Some(info)) => cmd_add::cmd(
             outputer,
-            content_handler,
-            content_handler,
+            content_handler_ref,
+            content_handler_mutref,
             user_cmd_runner,
             task_formatter,
             info.values_of_lossy("task-name").unwrap(),
@@ -207,8 +211,8 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
 
         ("append", Some(info)) => cmd_add::cmd(
             outputer,
-            content_handler,
-            content_handler,
+            content_handler_ref,
+            content_handler_mutref,
             user_cmd_runner,
             task_formatter,
             info.values_of_lossy("task-name").unwrap(),

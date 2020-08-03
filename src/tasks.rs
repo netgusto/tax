@@ -1,6 +1,7 @@
-use crate::model::Task;
+use crate::model::{Section, Task};
 use crate::services::ContentGetter;
 use regex::Regex;
+use std::rc::Rc;
 use std::time::SystemTime;
 
 lazy_static! {
@@ -8,18 +9,19 @@ lazy_static! {
         Regex::new(r"(?m)^\s*(?:-|\*)\s+\[(x|\s*|>)\]\s+(.+?)$").unwrap();
     static ref TASK_NAME_FOCUSED_REGEX: Regex = Regex::new(r"(?m)\*\*.+\*\*").unwrap();
     static ref COMMENT_REGEX: Regex = Regex::new(r"(?m)^(.*?)[^:]//(.+?)$").unwrap();
+    static ref HEADER_REGEX: Regex = Regex::new(r"(?m)^#{1,6}\s+(.*?)$").unwrap();
 }
 
 pub fn get_current_task(
     content_getter: &dyn ContentGetter,
     cycle: bool,
 ) -> Result<Option<Task>, String> {
-    let focused_tasks = get_focused_open_tasks(content_getter)?;
+    let (focused_tasks, _) = get_focused_open_tasks(content_getter)?;
     if focused_tasks.len() > 0 {
         return Ok(Some(focused_tasks[0].clone()));
     }
 
-    let tasks = get_open_tasks(content_getter)?;
+    let (tasks, _) = get_open_tasks(content_getter)?;
     if tasks.len() == 0 {
         return Ok(None);
     }
@@ -39,20 +41,44 @@ pub fn get_current_task(
     Ok(Some(tasks[0].clone()))
 }
 
-pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
+pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<(Vec<Task>, bool), String> {
     let mut tasks: Vec<Task> = Vec::new();
+    let mut sections: Vec<Rc<Section>> = Vec::new();
 
+    let mut section_num = 1;
     let mut task_num = 1;
     let mut line_num = 1;
+    let mut current_section: Option<Rc<Section>> = None;
 
     for line in content_getter.get_contents()? {
-        match TASK_LINE_REGEX.captures(line.as_str()) {
+        let l_str = line.as_str();
+
+        match HEADER_REGEX.captures(l_str) {
+            None => (),
+            Some(cap) => {
+                let section = Rc::from(Section {
+                    name: cap[1].trim().to_string(),
+                    num: section_num,
+                    line: line.clone(),
+                    line_num: line_num,
+                });
+                sections.push(section.clone());
+                current_section = Some(section);
+
+                section_num += 1;
+                line_num += 1;
+                continue;
+            }
+        };
+
+        match TASK_LINE_REGEX.captures(l_str) {
             None => (),
             Some(cap) => {
                 let check_symbol = cap[1].trim();
                 let name = String::from(&cap[2]);
+                let trimmed_name = name.trim();
 
-                let (name_without_comment, comment) = text_get_comment(name.as_str());
+                let (name_without_comment, comment) = text_get_comment(trimmed_name);
 
                 let is_task_focused = text_is_focused(name_without_comment.as_str());
                 tasks.push(Task {
@@ -68,6 +94,7 @@ pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, St
                     line_num: line_num,
                     line: String::from(&cap[0]),
                     is_focused: is_task_focused,
+                    section: current_section.clone(),
                 });
 
                 task_num += 1;
@@ -77,28 +104,41 @@ pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, St
         line_num += 1;
     }
 
-    Ok(tasks)
+    let use_section = sections.len() > 1;
+
+    Ok((tasks, use_section))
 }
 
-pub fn get_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
-    Ok(get_all_tasks(content_getter)?
-        .into_iter()
-        .filter(|task| !task.is_checked)
-        .collect())
+pub fn get_open_tasks(content_getter: &dyn ContentGetter) -> Result<(Vec<Task>, bool), String> {
+    match get_all_tasks(content_getter) {
+        Ok((tasks, use_sections)) => Ok((
+            tasks.into_iter().filter(|task| !task.is_checked).collect(),
+            use_sections,
+        )),
+        Err(msg) => Err(msg),
+    }
 }
 
-pub fn get_closed_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
-    Ok(get_all_tasks(content_getter)?
-        .into_iter()
-        .filter(|task| task.is_checked)
-        .collect())
+pub fn get_closed_tasks(content_getter: &dyn ContentGetter) -> Result<(Vec<Task>, bool), String> {
+    match get_all_tasks(content_getter) {
+        Ok((tasks, use_sections)) => Ok((
+            tasks.into_iter().filter(|task| task.is_checked).collect(),
+            use_sections,
+        )),
+        Err(msg) => Err(msg),
+    }
 }
 
-pub fn get_focused_open_tasks(content_getter: &dyn ContentGetter) -> Result<Vec<Task>, String> {
-    Ok(get_open_tasks(content_getter)?
-        .into_iter()
-        .filter(|task| task.is_focused)
-        .collect())
+pub fn get_focused_open_tasks(
+    content_getter: &dyn ContentGetter,
+) -> Result<(Vec<Task>, bool), String> {
+    match get_open_tasks(content_getter) {
+        Ok((tasks, use_sections)) => Ok((
+            tasks.into_iter().filter(|task| task.is_focused).collect(),
+            use_sections,
+        )),
+        Err(msg) => Err(msg),
+    }
 }
 
 pub fn text_is_check_symbol(s: &str) -> bool {
@@ -202,12 +242,11 @@ pub fn text_add_line_in_contents(
 
     for line in content_getter.get_contents()? {
         if line_num == add_line_num {
-            content += format!("{}\n{}\n", added_line, line).as_str();
+            content += format!("{}\n", added_line).as_str();
             added = true;
-        } else {
-            content += format!("{}\n", line).as_str();
         }
 
+        content += format!("{}\n", line).as_str();
         line_num += 1;
     }
 
@@ -223,7 +262,7 @@ pub fn text_add_line_in_contents(
 mod tests {
 
     use super::*;
-    use crate::test_helpers::{get_std_test_contents, get_std_test_tasks, FileReaderMock};
+    use crate::test_helpers::test::{get_std_test_contents, get_std_test_tasks, ContentGetterMock};
 
     #[test]
     fn test_task_to_markdown() {
@@ -247,20 +286,16 @@ mod tests {
     #[test]
     fn test_get_all_tasks() {
         // Empty contents
-        match get_all_tasks(&FileReaderMock {
-            outcome: Ok(Vec::new()),
-        }) {
-            Ok(tasks) => assert_eq!(tasks, Vec::new()),
+        match get_all_tasks(&ContentGetterMock::new(Ok(Vec::new()))) {
+            Ok((tasks, _)) => assert_eq!(tasks, Vec::new()),
             Err(e) => panic!(e),
         }
 
         // Std contents
         let (test_contents, expected_tasks) = get_std_test_contents();
 
-        match get_all_tasks(&FileReaderMock {
-            outcome: Ok(test_contents),
-        }) {
-            Ok(tasks) => assert_eq!(tasks, expected_tasks),
+        match get_all_tasks(&ContentGetterMock::new(Ok(test_contents))) {
+            Ok((tasks, _)) => assert_eq!(tasks, expected_tasks),
             Err(e) => panic!(e),
         }
     }
@@ -268,20 +303,16 @@ mod tests {
     #[test]
     fn test_get_open_tasks() {
         // Empty contents
-        match get_open_tasks(&FileReaderMock {
-            outcome: Ok(Vec::new()),
-        }) {
-            Ok(tasks) => assert_eq!(tasks, Vec::new()),
+        match get_open_tasks(&ContentGetterMock::new(Ok(Vec::new()))) {
+            Ok((tasks, _)) => assert_eq!(tasks, Vec::new()),
             Err(e) => panic!(e),
         }
 
         // Std contents
         let (test_contents, expected_tasks) = get_std_test_contents();
 
-        match get_open_tasks(&FileReaderMock {
-            outcome: Ok(test_contents),
-        }) {
-            Ok(tasks) => assert_eq!(
+        match get_open_tasks(&ContentGetterMock::new(Ok(test_contents))) {
+            Ok((tasks, _)) => assert_eq!(
                 tasks,
                 vec![
                     expected_tasks[0].clone(),
@@ -297,20 +328,16 @@ mod tests {
     #[test]
     fn test_get_focused_open_tasks() {
         // Empty contents
-        match get_focused_open_tasks(&FileReaderMock {
-            outcome: Ok(Vec::new()),
-        }) {
-            Ok(tasks) => assert_eq!(tasks, Vec::new()),
+        match get_focused_open_tasks(&ContentGetterMock::new(Ok(Vec::new()))) {
+            Ok((tasks, _)) => assert_eq!(tasks, Vec::new()),
             Err(e) => panic!(e),
         }
 
         // Std contents
         let (test_contents, expected_tasks) = get_std_test_contents();
 
-        match get_focused_open_tasks(&FileReaderMock {
-            outcome: Ok(test_contents),
-        }) {
-            Ok(tasks) => assert_eq!(
+        match get_focused_open_tasks(&ContentGetterMock::new(Ok(test_contents))) {
+            Ok((tasks, _)) => assert_eq!(
                 tasks,
                 vec![expected_tasks[1].clone(), expected_tasks[5].clone()]
             ),
@@ -321,12 +348,7 @@ mod tests {
     #[test]
     fn test_get_current_task() {
         // Empty contents
-        match get_current_task(
-            &FileReaderMock {
-                outcome: Ok(Vec::new()),
-            },
-            false,
-        ) {
+        match get_current_task(&ContentGetterMock::new(Ok(Vec::new())), false) {
             Ok(task) => assert_eq!(task, None),
             Err(e) => panic!(e),
         }
@@ -334,13 +356,60 @@ mod tests {
         // Std contents
         let (test_contents, expected_tasks) = get_std_test_contents();
 
-        match get_current_task(
-            &FileReaderMock {
-                outcome: Ok(test_contents),
-            },
-            false,
-        ) {
+        match get_current_task(&ContentGetterMock::new(Ok(test_contents)), false) {
             Ok(task) => assert_eq!(task, Some(expected_tasks[1].clone())),
+            Err(e) => panic!(e),
+        }
+    }
+
+    #[test]
+    fn test_text_add_line_in_contents() {
+        match text_add_line_in_contents(
+            &ContentGetterMock::new(Ok(Vec::new())),
+            1,
+            "Hello, World!".to_string(),
+        ) {
+            Ok(s) => assert_eq!(s, "Hello, World!\n"),
+            Err(e) => panic!(e),
+        }
+
+        match text_add_line_in_contents(
+            &ContentGetterMock::new(Ok(vec!["first line".to_string()])),
+            1,
+            "Hello, World!".to_string(),
+        ) {
+            Ok(s) => assert_eq!(s, "Hello, World!\nfirst line\n"),
+            Err(e) => panic!(e),
+        }
+
+        match text_add_line_in_contents(
+            &ContentGetterMock::new(Ok(vec!["first line".to_string()])),
+            2,
+            "Hello, World!".to_string(),
+        ) {
+            Ok(s) => assert_eq!(s, "first line\nHello, World!\n"),
+            Err(e) => panic!(e),
+        }
+
+        match text_add_line_in_contents(
+            &ContentGetterMock::new(Ok(vec!["first line".to_string(), "last line".to_string()])),
+            2,
+            "Hello, World!".to_string(),
+        ) {
+            Ok(s) => assert_eq!(s, "first line\nHello, World!\nlast line\n"),
+            Err(e) => panic!(e),
+        }
+
+        match text_add_line_in_contents(
+            &ContentGetterMock::new(Ok(vec![
+                "# Header".to_string(),
+                "".to_string(),
+                "- [ ] Do the stuff".to_string(),
+            ])),
+            3,
+            "Hello, World!".to_string(),
+        ) {
+            Ok(s) => assert_eq!(s, "# Header\n\nHello, World!\n- [ ] Do the stuff\n"),
             Err(e) => panic!(e),
         }
     }
