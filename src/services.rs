@@ -18,15 +18,19 @@ impl TaskFormatter {
         }
     }
 
-    pub fn display_numbered_task(&self, task: &Task) -> String {
+    pub fn display_numbered_task(&self, task: &Task, use_sections: bool) -> String {
         format!(
-            "{} {}",
+            "{} {}{}",
             self.display_task_num(task),
             self.display_task_name(task),
-            // match &task.section {
-            //     Some(rc) => rc.name.clone(),
-            //     None => String::from(""),
-            // },
+            if use_sections {
+                match &task.section {
+                    Some(rc) => format!(" ~ {}", rc.name.clone()),
+                    None => String::from(""),
+                }
+            } else {
+                "".to_string()
+            },
         )
     }
 

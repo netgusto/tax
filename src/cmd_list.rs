@@ -30,7 +30,7 @@ pub fn cmd(
                 }
             }
         }
-        outputer.info(task_formatter.display_numbered_task(&task))
+        outputer.info(task_formatter.display_numbered_task(&task, false))
     }
 
     Ok(())

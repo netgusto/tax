@@ -97,12 +97,14 @@ mod tests {
             &mut content_setter,
             &user_cmd_runner,
             &task_formatter,
-            vec!["Some task".to_string()],
+            vec!["**Some focused task** // with comments; see https://example.com".to_string()],
             AddPosition::Prepend,
         ) {
             Ok(()) => assert_eq!(
                 content_setter.content,
-                Some(String::from("- [ ] Some task\n"))
+                Some(String::from(
+                    "- [ ] **Some focused task** // with comments; see https://example.com\n"
+                ))
             ),
             Err(e) => panic!(e),
         }
@@ -159,7 +161,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cmd_add_after_section() {
+    fn test_cmd_add_top_section() {
         let mut string_outputer = StringOutputerMock::new();
         let content_getter = ContentGetterMock::new(Ok(vec![
             "# Section".to_string(),
@@ -183,6 +185,37 @@ mod tests {
                 content_setter.content,
                 Some(String::from(
                     "# Section\n\n- [ ] Some task\n- [ ] Existing task\n"
+                ))
+            ),
+            Err(e) => panic!(e),
+        }
+    }
+
+    #[test]
+    fn test_cmd_add_bottom_section() {
+        let mut string_outputer = StringOutputerMock::new();
+        let content_getter = ContentGetterMock::new(Ok(vec![
+            "# Section".to_string(),
+            "".to_string(),
+            "- [ ] Existing task".to_string(),
+        ]));
+        let mut content_setter = ContentSetterMock::new(Ok(()));
+        let user_cmd_runner = UserCmdRunnerMock::new();
+        let task_formatter = TaskFormatter::new(false);
+
+        match cmd(
+            &mut string_outputer,
+            &content_getter,
+            &mut content_setter,
+            &user_cmd_runner,
+            &task_formatter,
+            vec!["Some task".to_string()],
+            AddPosition::Append,
+        ) {
+            Ok(()) => assert_eq!(
+                content_setter.content,
+                Some(String::from(
+                    "# Section\n\n- [ ] Existing task\n- [ ] Some task\n"
                 ))
             ),
             Err(e) => panic!(e),

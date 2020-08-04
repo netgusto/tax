@@ -12,7 +12,7 @@ pub fn cmd(
     rank_one_based: usize,
     focus: bool,
 ) -> Result<(), String> {
-    let (tasks, _) = get_all_tasks(content_getter)?;
+    let (tasks, use_sections) = get_all_tasks(content_getter)?;
     if rank_one_based > tasks.len() {
         return Err(format!("Non existent task {}", rank_one_based));
     }
@@ -22,7 +22,7 @@ pub fn cmd(
     if task.is_checked {
         outputer.info(format!(
             "Task is completed, cannot proceed: {}",
-            task_formatter.display_numbered_task(&task)
+            task_formatter.display_numbered_task(&task, use_sections)
         ));
         return Ok(());
     }
@@ -30,13 +30,13 @@ pub fn cmd(
     if focus && task.is_focused {
         outputer.info(format!(
             "Already focused: {}",
-            task_formatter.display_numbered_task(&task)
+            task_formatter.display_numbered_task(&task, use_sections)
         ));
         return Ok(());
     } else if !focus && !task.is_focused {
         outputer.info(format!(
             "Already blured: {}",
-            task_formatter.display_numbered_task(&task)
+            task_formatter.display_numbered_task(&task, use_sections)
         ));
         return Ok(());
     }
@@ -60,7 +60,7 @@ pub fn cmd(
     outputer.info(format!(
         "{}: {}",
         action,
-        task_formatter.display_numbered_task(&updated_task)
+        task_formatter.display_numbered_task(&updated_task, use_sections)
     ));
 
     match user_cmd_runner.build(

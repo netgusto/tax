@@ -8,7 +8,7 @@ pub fn cmd(
     user_cmd_runner: &dyn UserCmdRunner,
     task_formatter: &TaskFormatter,
 ) -> Result<(), String> {
-    let (tasks, _) = get_closed_tasks(content_getter)?;
+    let (tasks, use_sections) = get_closed_tasks(content_getter)?;
 
     if tasks.len() == 0 {
         outputer.info("No task to prune".to_string());
@@ -29,7 +29,7 @@ pub fn cmd(
     outputer.info(msg.clone());
 
     for task in &tasks {
-        outputer.info(task_formatter.display_numbered_task(&task))
+        outputer.info(task_formatter.display_numbered_task(&task, use_sections))
     }
 
     match user_cmd_runner.build(String::from("prune"), String::from("PRUNE"), msg) {

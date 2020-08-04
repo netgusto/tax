@@ -8,7 +8,9 @@ pub fn cmd(
     cycle: bool,
 ) -> Result<(), String> {
     match get_current_task(content_getter, cycle) {
-        Ok(Some(task)) => outputer.info(task_formatter.display_numbered_task(&task)),
+        Ok(Some((task, use_sections))) => {
+            outputer.info(task_formatter.display_numbered_task(&task, use_sections))
+        }
         _ => (),
     };
     Ok(())

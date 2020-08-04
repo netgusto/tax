@@ -15,10 +15,10 @@ lazy_static! {
 pub fn get_current_task(
     content_getter: &dyn ContentGetter,
     cycle: bool,
-) -> Result<Option<Task>, String> {
-    let (focused_tasks, _) = get_focused_open_tasks(content_getter)?;
+) -> Result<Option<(Task, bool)>, String> {
+    let (focused_tasks, use_sections) = get_focused_open_tasks(content_getter)?;
     if focused_tasks.len() > 0 {
-        return Ok(Some(focused_tasks[0].clone()));
+        return Ok(Some((focused_tasks[0].clone(), use_sections)));
     }
 
     let (tasks, _) = get_open_tasks(content_getter)?;
@@ -35,10 +35,13 @@ pub fn get_current_task(
 
         // select task based on minute for
         // stateless stable rotation of displayed tasks
-        return Ok(Some(tasks[minutes as usize % tasks.len()].clone()));
+        return Ok(Some((
+            tasks[minutes as usize % tasks.len()].clone(),
+            use_sections,
+        )));
     }
 
-    Ok(Some(tasks[0].clone()))
+    Ok(Some((tasks[0].clone(), use_sections)))
 }
 
 pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<(Vec<Task>, bool), String> {
@@ -357,7 +360,7 @@ mod tests {
         let (test_contents, expected_tasks) = get_std_test_contents();
 
         match get_current_task(&ContentGetterMock::new(Ok(test_contents)), false) {
-            Ok(task) => assert_eq!(task, Some(expected_tasks[1].clone())),
+            Ok(task) => assert_eq!(task, Some((expected_tasks[1].clone(), false))),
             Err(e) => panic!(e),
         }
     }
