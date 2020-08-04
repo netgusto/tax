@@ -20,6 +20,7 @@ mod cmd_check;
 mod cmd_current;
 mod cmd_edit;
 mod cmd_focus;
+mod cmd_focus_section;
 mod cmd_list;
 mod cmd_prune;
 mod cmd_which;
@@ -145,24 +146,52 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
     match matches.subcommand() {
         (_, None) => cmd_list::cmd(outputer, content_handler_ref, task_formatter),
         ("edit", _) => cmd_edit::cmd(taxfile_path_getter, user_cmd_runner),
-        ("focus", Some(info)) => cmd_focus::cmd(
-            outputer,
-            content_handler_ref,
-            content_handler_mutref,
-            user_cmd_runner,
-            task_formatter,
-            value_t!(info.value_of("task-index"), usize).unwrap(),
-            true,
-        ),
-        ("blur", Some(info)) => cmd_focus::cmd(
-            outputer,
-            content_handler_ref,
-            content_handler_mutref,
-            user_cmd_runner,
-            task_formatter,
-            value_t!(info.value_of("task-index"), usize).unwrap(),
-            false,
-        ),
+        ("focus", Some(info)) => {
+            let to_focus = info.value_of("task-index").unwrap();
+
+            return match to_focus.parse::<usize>() {
+                Ok(rank_one_based) => cmd_focus::cmd(
+                    outputer,
+                    content_handler_ref,
+                    content_handler_mutref,
+                    user_cmd_runner,
+                    task_formatter,
+                    rank_one_based,
+                    true,
+                ),
+                Err(_) => cmd_focus_section::cmd(
+                    outputer,
+                    content_handler_ref,
+                    content_handler_mutref,
+                    user_cmd_runner,
+                    to_focus.to_string(),
+                    true,
+                ),
+            };
+        }
+        ("blur", Some(info)) => {
+            let to_focus = info.value_of("task-index").unwrap();
+
+            return match to_focus.parse::<usize>() {
+                Ok(rank_one_based) => cmd_focus::cmd(
+                    outputer,
+                    content_handler_ref,
+                    content_handler_mutref,
+                    user_cmd_runner,
+                    task_formatter,
+                    rank_one_based,
+                    false,
+                ),
+                Err(_) => cmd_focus_section::cmd(
+                    outputer,
+                    content_handler_ref,
+                    content_handler_mutref,
+                    user_cmd_runner,
+                    to_focus.to_string(),
+                    false,
+                ),
+            };
+        }
 
         ("check", Some(info)) => cmd_check::cmd(
             outputer,

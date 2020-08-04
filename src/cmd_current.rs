@@ -30,7 +30,7 @@ mod tests {
         // Empty contents
         {
             let outputer_mock = &mut StringOutputerMock::new();
-            let content_getter_mock = &ContentGetterMock::new(Ok(Vec::new()));
+            let content_getter_mock = &ContentGetterMock::new(Ok("".to_string()));
 
             cmd(outputer_mock, content_getter_mock, &task_formatter, false).unwrap();
             assert_eq!(outputer_mock.get_info(), "");

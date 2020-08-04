@@ -24,16 +24,18 @@ pub mod test {
     // ContentGetterMock
     // ////////////////////////////////////////////////////////////////////////////
     pub struct ContentGetterMock {
-        outcome: Result<Vec<String>, String>,
+        outcome: Result<String, String>,
     }
+
     impl ContentGetterMock {
         #[allow(dead_code)]
-        pub fn new(outcome: Result<Vec<String>, String>) -> Self {
+        pub fn new(outcome: Result<String, String>) -> Self {
             return ContentGetterMock { outcome: outcome };
         }
     }
+
     impl crate::services::ContentGetter for ContentGetterMock {
-        fn get_contents(&self) -> Result<Vec<String>, String> {
+        fn get_contents(&self) -> Result<String, String> {
             self.outcome.clone()
         }
     }
@@ -115,7 +117,7 @@ pub mod test {
     pub struct TaskFormatterMock {}
 
     #[allow(dead_code)]
-    pub fn get_std_test_contents() -> (Vec<String>, Vec<crate::model::Task>) {
+    pub fn get_std_test_contents() -> (String, Vec<crate::model::Task>) {
         (
             vec![
                 String::from("Not a task"),
@@ -126,7 +128,8 @@ pub mod test {
                 String::from("- [x] **Focused checked**"),
                 String::from("- [ ] Standard unchecked // with comments"),
                 String::from("- [ ] **Standard unchecked focused** // with comments"),
-            ],
+            ]
+            .join("\n"),
             vec![
                 crate::model::Task {
                     num: 1,
@@ -198,7 +201,7 @@ pub mod test {
         )
     }
     #[allow(dead_code)]
-    pub fn get_std_test_tasks() -> (Vec<String>, Vec<crate::model::Task>) {
+    pub fn get_std_test_tasks() -> (String, Vec<crate::model::Task>) {
         (
             vec![
                 String::from("- [ ] Standard unchecked"),
@@ -207,7 +210,8 @@ pub mod test {
                 String::from("- [x] **Focused checked**"),
                 String::from("- [ ] Standard unchecked // with comments"),
                 String::from("- [ ] **Standard unchecked focused** // with comments"),
-            ],
+            ]
+            .join("\n"),
             vec![
                 crate::model::Task {
                     num: 1,

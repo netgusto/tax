@@ -17,6 +17,9 @@ pub struct Task {
 pub struct Section {
     pub num: usize,
     pub name: String,
+    pub plain_name: String,
+    pub is_focused: bool,
     pub line_num: usize,
     pub line: String,
+    pub level: usize,
 }

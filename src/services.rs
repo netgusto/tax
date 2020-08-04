@@ -3,7 +3,7 @@ use crate::model::Task;
 use colored::*;
 use std::env;
 use std::fs::{self, File};
-use std::io::{prelude::*, BufReader};
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -25,7 +25,14 @@ impl TaskFormatter {
             self.display_task_name(task),
             if use_sections {
                 match &task.section {
-                    Some(rc) => format!(" ~ {}", rc.name.clone()),
+                    Some(rc) => format!(
+                        " ~ {}",
+                        if task.section.as_ref().unwrap().is_focused {
+                            self.display_bold(rc.plain_name.clone())
+                        } else {
+                            rc.plain_name.clone()
+                        }
+                    ),
                     None => String::from(""),
                 }
             } else {
@@ -49,6 +56,7 @@ impl TaskFormatter {
             task.name.clone()
         }
     }
+
     pub fn display_task_num(&self, task: &Task) -> String {
         if task.is_focused && self.supports_colors {
             format!("[{}]", self.display_bold(format!("{}", task.num)))
@@ -121,19 +129,19 @@ pub struct ContentHandlerReal {
 }
 
 pub trait ContentGetter {
-    fn get_contents(&self) -> Result<Vec<String>, String>;
+    fn get_contents(&self) -> Result<String, String>;
 }
 
 impl ContentGetter for ContentHandlerReal {
-    fn get_contents(&self) -> Result<Vec<String>, String> {
+    fn get_contents(&self) -> Result<String, String> {
         match File::open(&self.path) {
             Err(_) => Err(format!("Could not open file {}", &self.path)),
-            Ok(f) => {
-                let reader = BufReader::new(f);
-                let lines_result = reader.lines().collect::<Result<_, _>>();
-                match lines_result {
+            Ok(mut f) => {
+                let mut content = String::new();
+
+                match f.read_to_string(&mut content) {
                     Err(_) => Err(format!("Could not read file {}", &self.path)),
-                    Ok(lines) => Ok(lines),
+                    Ok(_) => Ok(content),
                 }
             }
         }

@@ -2,7 +2,7 @@ use crate::cmd_list;
 use crate::model::Task;
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
 use crate::tasks::{
-    get_all_tasks, task_to_markdown, text_add_line_in_contents, text_get_comment, text_is_focused,
+    get_all_tasks, task_to_markdown, text_add_line_in_str, text_get_comment, text_is_focused,
     text_remove_focus,
 };
 
@@ -22,7 +22,7 @@ pub fn cmd(
 ) -> Result<(), String> {
     let task_name = task_parts.join(" ");
 
-    let (tasks, _) = get_all_tasks(content_getter)?;
+    let (tasks, _, _) = get_all_tasks(content_getter)?;
 
     let (line_num, task_num, operation) = if tasks.len() == 0 {
         (1, 1, "APPEND".to_string())
@@ -58,7 +58,11 @@ pub fn cmd(
     };
 
     new_task.line = task_to_markdown(&new_task);
-    let result = text_add_line_in_contents(content_getter, line_num, new_task.line.clone())?;
+    let result = text_add_line_in_str(
+        &content_getter.get_contents()?,
+        line_num,
+        new_task.line.clone(),
+    )?;
     content_setter.set_contents(result)?;
 
     match user_cmd_runner.build(
@@ -86,7 +90,7 @@ mod tests {
     #[test]
     fn test_cmd_add_to_empty_file() {
         let mut string_outputer = StringOutputerMock::new();
-        let content_getter = ContentGetterMock::new(Ok(vec![]));
+        let content_getter = ContentGetterMock::new(Ok("".to_string()));
         let mut content_setter = ContentSetterMock::new(Ok(()));
         let user_cmd_runner = UserCmdRunnerMock::new();
         let task_formatter = TaskFormatter::new(false);
@@ -113,7 +117,7 @@ mod tests {
     #[test]
     fn test_cmd_add_to_top() {
         let mut string_outputer = StringOutputerMock::new();
-        let content_getter = ContentGetterMock::new(Ok(vec!["- [ ] Existing task".to_string()]));
+        let content_getter = ContentGetterMock::new(Ok("- [ ] Existing task".to_string()));
         let mut content_setter = ContentSetterMock::new(Ok(()));
         let user_cmd_runner = UserCmdRunnerMock::new();
         let task_formatter = TaskFormatter::new(false);
@@ -138,7 +142,7 @@ mod tests {
     #[test]
     fn test_cmd_add_to_bottom() {
         let mut string_outputer = StringOutputerMock::new();
-        let content_getter = ContentGetterMock::new(Ok(vec!["- [ ] Existing task".to_string()]));
+        let content_getter = ContentGetterMock::new(Ok("- [ ] Existing task".to_string()));
         let mut content_setter = ContentSetterMock::new(Ok(()));
         let user_cmd_runner = UserCmdRunnerMock::new();
         let task_formatter = TaskFormatter::new(false);
@@ -167,7 +171,8 @@ mod tests {
             "# Section".to_string(),
             "".to_string(),
             "- [ ] Existing task".to_string(),
-        ]));
+        ]
+        .join("\n")));
         let mut content_setter = ContentSetterMock::new(Ok(()));
         let user_cmd_runner = UserCmdRunnerMock::new();
         let task_formatter = TaskFormatter::new(false);
@@ -198,7 +203,8 @@ mod tests {
             "# Section".to_string(),
             "".to_string(),
             "- [ ] Existing task".to_string(),
-        ]));
+        ]
+        .join("\n")));
         let mut content_setter = ContentSetterMock::new(Ok(()));
         let user_cmd_runner = UserCmdRunnerMock::new();
         let task_formatter = TaskFormatter::new(false);

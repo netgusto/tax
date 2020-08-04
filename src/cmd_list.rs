@@ -9,7 +9,7 @@ pub fn cmd(
     content_getter: &dyn ContentGetter,
     task_formatter: &TaskFormatter,
 ) -> Result<(), String> {
-    let (tasks, use_sections) = get_open_tasks(content_getter)?;
+    let (tasks, use_sections, _) = get_open_tasks(content_getter)?;
     // let mut current_section: Option<Rc<Section>> = None;
     let mut section_num = 0;
 
@@ -49,7 +49,7 @@ mod tests {
         // Empty contents
         {
             let outputer_mock = &mut StringOutputerMock::new();
-            let content_getter_mock = &ContentGetterMock::new(Ok(Vec::new()));
+            let content_getter_mock = &ContentGetterMock::new(Ok("".to_string()));
 
             cmd(outputer_mock, content_getter_mock, task_formatter).unwrap();
             assert_eq!(outputer_mock.get_info(), "");

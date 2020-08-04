@@ -1,7 +1,5 @@
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, TaskFormatter, UserCmdRunner};
-use crate::tasks::{
-    get_all_tasks, task_to_markdown, text_add_focus, text_replace_line_in_contents,
-};
+use crate::tasks::{get_all_tasks, task_to_markdown, text_add_focus, text_replace_line_in_str};
 
 pub fn cmd(
     outputer: &mut dyn StringOutputer,
@@ -12,7 +10,7 @@ pub fn cmd(
     rank_one_based: usize,
     focus: bool,
 ) -> Result<(), String> {
-    let (tasks, use_sections) = get_all_tasks(content_getter)?;
+    let (tasks, use_sections, _) = get_all_tasks(content_getter)?;
     if rank_one_based > tasks.len() {
         return Err(format!("Non existent task {}", rank_one_based));
     }
@@ -51,8 +49,11 @@ pub fn cmd(
 
     updated_task.line = task_to_markdown(&updated_task);
 
-    let replaced_content =
-        text_replace_line_in_contents(content_getter, task.line_num, updated_task.line.clone())?;
+    let replaced_content = text_replace_line_in_str(
+        &content_getter.get_contents()?,
+        task.line_num,
+        &updated_task.line,
+    );
 
     let result = content_setter.set_contents(replaced_content);
 
