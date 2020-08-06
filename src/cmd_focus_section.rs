@@ -1,7 +1,5 @@
-use crate::model::Section;
 use crate::services::{ContentGetter, ContentSetter, StringOutputer, UserCmdRunner};
-use crate::tasks::{get_all_tasks, section_to_markdown, text_replace_line_in_str};
-use std::rc::Rc;
+use crate::tasks::{get_all_tasks, search_section, section_to_markdown, text_replace_line_in_str};
 
 pub fn cmd(
     outputer: &mut dyn StringOutputer,
@@ -11,7 +9,7 @@ pub fn cmd(
     section_name: String,
     focus: bool,
 ) -> Result<(), String> {
-    let (_, _, sections) = get_all_tasks(content_getter)?;
+    let (_, _, sections, _) = get_all_tasks(content_getter)?;
 
     let section = match search_section(section_name.as_ref(), &sections) {
         None => return Err(format!("Section not found: {}", section_name)),
@@ -61,31 +59,4 @@ pub fn cmd(
     }
 
     content_setter.set_contents(replaced_content)
-}
-
-fn search_section(search: &str, sections: &Vec<Rc<Section>>) -> Option<Section> {
-    let section_name_lower = search.to_lowercase();
-
-    let mut partial_match: Option<Section> = None;
-    let mut exact_match: Option<Section> = None;
-
-    for section_rc in sections {
-        let section_cur = section_rc.as_ref();
-        let section_cur_name_lower = section_cur.name.to_lowercase();
-
-        if section_cur_name_lower == section_name_lower {
-            exact_match = Some(section_cur.clone());
-            break;
-        } else if section_cur_name_lower.contains(&section_name_lower) {
-            partial_match = Some(section_cur.clone());
-        }
-    }
-
-    match exact_match {
-        None => match partial_match {
-            None => None,
-            Some(section) => Some(section),
-        },
-        Some(section) => Some(section),
-    }
 }

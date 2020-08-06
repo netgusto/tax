@@ -20,6 +20,7 @@ pub struct Section {
     pub plain_name: String,
     pub is_focused: bool,
     pub line_num: usize,
+    pub line_num_end: usize,
     pub line: String,
     pub level: usize,
 }

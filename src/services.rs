@@ -28,7 +28,7 @@ impl TaskFormatter {
                     Some(rc) => format!(
                         " ~ {}",
                         if task.section.as_ref().unwrap().is_focused {
-                            self.display_bold(rc.plain_name.clone())
+                            self.display_bold(&rc.plain_name)
                         } else {
                             rc.plain_name.clone()
                         }
@@ -41,9 +41,17 @@ impl TaskFormatter {
         )
     }
 
-    fn display_bold(&self, s: String) -> String {
+    pub fn display_bold_color_only(&self, s: &str) -> String {
         if self.supports_colors {
-            s.clone().bold().to_string()
+            s.bold().to_string()
+        } else {
+            s.to_string()
+        }
+    }
+
+    pub fn display_bold(&self, s: &str) -> String {
+        if self.supports_colors {
+            s.bold().to_string()
         } else {
             format!("**{}**", s)
         }
@@ -51,7 +59,7 @@ impl TaskFormatter {
 
     pub fn display_task_name(&self, task: &Task) -> String {
         if task.is_focused {
-            self.display_bold(task.plain_name.clone())
+            self.display_bold(&task.plain_name)
         } else {
             task.name.clone()
         }
@@ -59,7 +67,7 @@ impl TaskFormatter {
 
     pub fn display_task_num(&self, task: &Task) -> String {
         if task.is_focused && self.supports_colors {
-            format!("[{}]", self.display_bold(format!("{}", task.num)))
+            format!("[{}]", self.display_bold(&format!("{}", task.num)))
         } else {
             format!("[{}]", task.num)
         }

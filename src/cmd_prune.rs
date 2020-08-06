@@ -8,7 +8,7 @@ pub fn cmd(
     user_cmd_runner: &dyn UserCmdRunner,
     task_formatter: &TaskFormatter,
 ) -> Result<(), String> {
-    let (tasks, use_sections, _) = get_closed_tasks(content_getter)?;
+    let (tasks, use_sections, _, _) = get_closed_tasks(content_getter)?;
 
     if tasks.len() == 0 {
         outputer.info("No task to prune".to_string());

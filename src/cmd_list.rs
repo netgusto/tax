@@ -1,19 +1,21 @@
 use crate::services::{ContentGetter, StringOutputer, TaskFormatter};
-use crate::tasks::get_open_tasks;
-
-// use crate::model::Section;
-// use std::rc::Rc;
+use crate::tasks::{filter_tasks_in_section, get_open_tasks};
 
 pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     task_formatter: &TaskFormatter,
 ) -> Result<(), String> {
-    let (tasks, use_sections, _) = get_open_tasks(content_getter)?;
-    // let mut current_section: Option<Rc<Section>> = None;
-    let mut section_num = 0;
+    let (tasks, use_sections, _, focused_section) = get_open_tasks(content_getter)?;
 
-    for task in tasks {
+    let filtered_tasks = if use_sections && focused_section != None {
+        filter_tasks_in_section(&tasks, focused_section.unwrap().as_ref())
+    } else {
+        tasks
+    };
+
+    let mut section_num = 0;
+    for task in filtered_tasks {
         if use_sections {
             match &task.section {
                 None => (),
@@ -21,10 +23,20 @@ pub fn cmd(
                     let section = rc.as_ref();
                     if section_num != section.num {
                         outputer.info(format!(
-                            "{}# {}",
+                            "{}{} {}",
                             if section_num == 0 { "" } else { "\n" },
-                            section.name.clone()
+                            if section.is_focused {
+                                task_formatter.display_bold_color_only("#")
+                            } else {
+                                "#".to_string()
+                            },
+                            if section.is_focused {
+                                task_formatter.display_bold(&section.plain_name)
+                            } else {
+                                section.plain_name.clone()
+                            }
                         ));
+
                         section_num = section.num;
                     }
                 }

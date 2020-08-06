@@ -98,8 +98,14 @@ fn get_arg_matches() -> ArgMatches<'static> {
                 .alias("prepend")
                 .about("Add the given task at the top of the task list")
                 .arg(
+                    Arg::with_name("section")
+                        .short("s")
+                        .long("section")
+                        .takes_value(true)
+                        .help("Section where to add task"),
+                )
+                .arg(
                     Arg::with_name("task-name")
-                        .index(1)
                         .required(true)
                         .multiple(true)
                         .help("Name of the task to add"),
@@ -109,8 +115,14 @@ fn get_arg_matches() -> ArgMatches<'static> {
             App::new("append")
                 .about("Add the given task at the bottom of the task list")
                 .arg(
+                    Arg::with_name("section")
+                        .short("s")
+                        .long("section")
+                        .takes_value(true)
+                        .help("Section where to add task"),
+                )
+                .arg(
                     Arg::with_name("task-name")
-                        .index(1)
                         .required(true)
                         .multiple(true)
                         .help("Name of the task to add"),
@@ -235,6 +247,10 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             user_cmd_runner,
             task_formatter,
             info.values_of_lossy("task-name").unwrap(),
+            match info.value_of_lossy("section") {
+                None => None,
+                Some(s) => Some(s.to_string()),
+            },
             cmd_add::AddPosition::Prepend,
         ),
 
@@ -245,6 +261,10 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             user_cmd_runner,
             task_formatter,
             info.values_of_lossy("task-name").unwrap(),
+            match info.value_of_lossy("section") {
+                None => None,
+                Some(s) => Some(s.to_string()),
+            },
             cmd_add::AddPosition::Append,
         ),
         _ => Err(format!("Unknown command")),

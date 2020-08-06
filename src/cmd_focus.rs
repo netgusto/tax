@@ -10,7 +10,7 @@ pub fn cmd(
     rank_one_based: usize,
     focus: bool,
 ) -> Result<(), String> {
-    let (tasks, use_sections, _) = get_all_tasks(content_getter)?;
+    let (tasks, use_sections, _, _) = get_all_tasks(content_getter)?;
     if rank_one_based > tasks.len() {
         return Err(format!("Non existent task {}", rank_one_based));
     }
