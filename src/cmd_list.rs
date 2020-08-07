@@ -1,5 +1,5 @@
 use crate::services::{ContentGetter, StringOutputer, TaskFormatter};
-use crate::tasks::{filter_tasks_in_section, get_all_tasks, get_open_tasks};
+use crate::tasks::{filter_tasks_in_section, get_open_tasks};
 
 pub fn cmd(
     outputer: &mut dyn StringOutputer,
@@ -7,40 +7,33 @@ pub fn cmd(
     task_formatter: &TaskFormatter,
     all: bool,
 ) -> Result<(), String> {
-    let (filtered_tasks, other_tasks_hint, use_sections) = if all {
-        let (all_tasks, use_sections, _, _) = get_all_tasks(content_getter)?;
-        (all_tasks, None, use_sections)
-    } else {
-        let (open_tasks, use_sections, _, focused_section) = get_open_tasks(content_getter)?;
+    let (open_tasks, use_sections, _, focused_section) = get_open_tasks(content_getter)?;
 
-        let mut other_tasks_hint: Option<String> = None;
+    let mut other_tasks_hint: Option<String> = None;
 
-        let filtered_tasks = if use_sections && focused_section != None {
-            let focused_section_unwrapped = focused_section.unwrap();
-            let focused_section_ref = focused_section_unwrapped.as_ref();
-            match filter_tasks_in_section(&open_tasks, focused_section_ref) {
-                ftasks => {
-                    let nb_diff = open_tasks.len() - ftasks.len();
+    let filtered_tasks = if !all && use_sections && focused_section != None {
+        let focused_section_unwrapped = focused_section.unwrap();
+        let focused_section_ref = focused_section_unwrapped.as_ref();
+        match filter_tasks_in_section(&open_tasks, focused_section_ref) {
+            ftasks => {
+                let nb_diff = open_tasks.len() - ftasks.len();
 
-                    other_tasks_hint = if nb_diff > 0 {
-                        Some(format!(
-                            "\n{} other open task{} outside of \"{}\".",
-                            nb_diff,
-                            if nb_diff > 1 { "s" } else { "" },
-                            focused_section_ref.plain_name,
-                        ))
-                    } else {
-                        None
-                    };
+                other_tasks_hint = if nb_diff > 0 {
+                    Some(format!(
+                        "\n{} other open task{} outside of \"{}\".",
+                        nb_diff,
+                        if nb_diff > 1 { "s" } else { "" },
+                        focused_section_ref.plain_name,
+                    ))
+                } else {
+                    None
+                };
 
-                    ftasks
-                }
+                ftasks
             }
-        } else {
-            open_tasks
-        };
-
-        (filtered_tasks, other_tasks_hint, use_sections)
+        }
+    } else {
+        open_tasks
     };
 
     let mut section_num = 0;
