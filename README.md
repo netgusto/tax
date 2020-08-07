@@ -14,7 +14,7 @@ Tasks are markdown:
 
 tax is meant to offer basic operations to handle a task list from the CLI, optionally displaying the tasks one at a time on your bash prompt and your tmux status line.
 
-![](assets/overview.png)
+![](assets/demo.gif)
 
 ## Format
 
