@@ -82,7 +82,7 @@ fn get_arg_matches() -> ArgMatches<'static> {
         .subcommand(
             App::new("list")
                 .alias("ls")
-                .about("Print all open tasks of the list, or the focused section if any")
+                .about("Print all open tasks of the list, or of the focused section if any")
                 .arg(
                     Arg::with_name("all")
                         .short("a")
@@ -102,7 +102,11 @@ fn get_arg_matches() -> ArgMatches<'static> {
                 .alias("purge")
                 .about("Remove all completed tasks from the task list"),
         )
-        .subcommand(App::new("cat").alias("view").about("Print the task file"))
+        .subcommand(
+            App::new("cat")
+                .alias("view")
+                .about("Print the content of the task file without any processing"),
+        )
         .subcommand(App::new("which").about("Print the path of the current task list file"))
         .subcommand(
             App::new("add")

@@ -1,4 +1,4 @@
-# tax, CLI Task List Manager [![CircleCI](https://circleci.com/gh/netgusto/tax.svg?style=svg)](https://circleci.com/gh/netgusto/tax)
+# tax, CLI Task List Manager
 
 Displays / manages the tasks in `~/tasks.md`, or from the file pointed by `$TAX_FILE` if set.
 
@@ -12,11 +12,11 @@ Tasks are markdown:
 - [ ] Send that email
 ```
 
-tax is meant to offer basic operations to handle a task list from the CLI, optionally displaying the tasks one at a time on your bash prompt and your tmux status line.
+**tax** offers basic operations to manage a task list from the CLI.
 
 ![](assets/demo.gif)
 
-## Format
+## Task file format
 
 ### Task
 
@@ -59,45 +59,56 @@ Focused tasks can have a comment; in that case, only the task name is focused, n
 - [ ] **This is a focused task** // with a comment, outside of the focus
 ```
 
+### Section
+
+A task file can optionnaly feature sections, subdivizing the task list in sub-lists.
+
+A section is denoted by a markdown Header of any level.
+
+When the task file contains only one section, **tax** will behave the same as without any section.
+
+```
+# Job
+
+- [ ] Send that email
+
+## Perso
+
+- [ ] Fix the roof
+- [ ] Prepare Korean BBQ
+```
+
+Sections can be focused. When a section is focused, **tax** will display only the tasks it contains.
+
 ## Commands
 
-### tax | tax list | tax ls
+#### `tax list [-a|--all]`
 
-Displays the current list of open tasks.
+Alias `tax`, `tax ls`.
 
-![](assets/cmd-list.png)
+Print all open tasks of the list, or of the focused section if any.
 
-### tax current
+If `-a|--all` is set, all open tasks will be listed, regardless of section focus.
 
-Displays the first open task of the list.
+#### `tax current`
 
-![](assets/cmd-current.png)
+Print the first open (focused if any) task of the list. Useful in prompt or tmux status.
 
-Meant to be included in prompt or tmux status.
+#### `tax cycle`
 
-### tax cycle
+Like `tax current`, but changes task every minute if no task is focused.
 
-Picks one open task from the list and display it. **The picked task changes every minute.**
+#### `tax cat`
 
-![](assets/cmd-cycle.png)
+Alias `tax view`.
 
-Meant to be included in prompt or tmux status.
+Print the content of the task file without any processing.
 
-### tax cat
-
-Alias: `tax view`.
-
-Displays the content of the taxfile without any processing.
-
-![](assets/cmd-cat.png)
-
-### tax check $TASK_NUM | tax uncheck $TASK_NUM
+#### `tax check $TASK_NUM` and `tax uncheck $TASK_NUM`
 
 Checks/Unchecks the task corresponding to the given number `$TASK_NUM`.
 
-![](assets/cmd-check.png)
-
-### tax focus $TASK_NUM | tax blur $TASK_NUM
+#### `tax focus $TASK_NUM` and `tax blur $TASK_NUM`
 
 Focuses/Blurs the task corresponding to the given number `$TASK_NUM`.
 
@@ -111,33 +122,46 @@ Ex:
 
 Focused tasks will be displayed with priority over non focused tasks by the `tax current` and `tax cycle` commands.
 
-![](assets/cmd-focus.png)
+#### `tax focus $SECTION` and `tax blur $SECTION`
 
-### tax add "The task"
+Focuses/Blurs the section corresponding to the given name `$SECTION`.
+
+A focused section is a bold header in markdown formatting.
+
+Ex:
+
+```markdown
+# **This is a focused section**
+- [ ] Some task
+```
+
+When a section is focused, **tax** will display the tasks of this section only.
+
+#### `tax add [-s "section"|--section "section"] "The task"`
 
 Aliases: `tax push`, `tax prepend`.
 
-Adds the given task on top of the first task of the list.
+Adds the given task to the task list.
 
-![](assets/cmd-add.png)
+If `-s|--section` is provided, the task will be added to the matching section.
 
-### tax append "The task"
+If a section is focused, the task will be added to the focused section.
 
-Appends the given task after the last task of the list.
+Otherwise, the task will be added at the top of the task list.
 
-![](assets/cmd-append.png)
+#### `tax append [-s "section"|--section "section"] "The task"`
 
-### tax prune
+Like `tax add`, but appends the task to the list instead of pushing it on top.
+
+### `tax prune`
 
 Removes all checked tasks from the task list.
 
-![](assets/cmd-prune.png)
-
-### tax edit
+### `tax edit`
 
 Opens the current task file in `$EDITOR`.
 
-### tax which
+### `tax which`
 
 Tells which tasks file is currently in use. Useful for scripting.
 
@@ -177,9 +201,9 @@ set -g status-right '[...your status config...] #(/path/to/tax cycle)'
 
 ## Color support
 
-If tax is running in the context of a TTY, it will emit ANSI escape sequences to display focused tasks in bold font, instead of markdown bold markup.
+If **tax** is running in the context of a TTY, it will emit ANSI escape sequences to display focused tasks in bold font, instead of markdown bold markup.
 
-If tax is not running in a TTY (for instance, in a shell `$PS1`), emitting ANSI escape sequences can be forced by setting the environment variable `CLICOLOR_FORCE=1`.
+If **tax** is not running in a TTY (for instance, in a shell `$PS1`), emitting ANSI escape sequences can be forced by setting the environment variable `CLICOLOR_FORCE=1`.
 
 You can disable all ANSI escape sequences by setting the environment variable `NO_COLOR=1`.
 
@@ -187,9 +211,9 @@ Note: tmux status line does not interpret ANSI escape sequences (not a TTY).
 
 ### React to changes
 
-If `$TAX_CHANGE_CMD` is set in the environment and contains a valid command, tax will execute it as a `sh` command after every change it makes to your task file.
+If `$TAX_CHANGE_CMD` is set in the environment and contains a valid command, **tax** will execute it as a `sh` command after every change it makes to your task file.
 
-tax exposes a set of environment variables to `$TAX_CHANGE_CMD` to provide information about the change.
+**tax** exposes a set of environment variables to `$TAX_CHANGE_CMD` to provide information about the change.
 
 * **For all tax commands:**
   * `$TAX_FILE`: the absolute path of the changed tasks file
