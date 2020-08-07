@@ -14,6 +14,8 @@ Tasks are markdown:
 
 **tax** offers basic operations to manage a task list from the CLI.
 
+![](assets/demo.gif)
+
 ## Task file format
 
 ### Task
