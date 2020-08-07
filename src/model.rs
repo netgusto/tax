@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 #[derive(std::clone::Clone, Debug, PartialEq)]
 pub struct Task {
     pub num: usize,
@@ -8,4 +10,17 @@ pub struct Task {
     pub line_num: usize,
     pub line: String,
     pub is_focused: bool,
+    pub section: Option<Rc<Section>>,
+}
+
+#[derive(std::clone::Clone, Debug, PartialEq)]
+pub struct Section {
+    pub num: usize,
+    pub name: String,
+    pub plain_name: String,
+    pub is_focused: bool,
+    pub line_num: usize,
+    pub line_num_end: usize,
+    pub line: String,
+    pub level: usize,
 }

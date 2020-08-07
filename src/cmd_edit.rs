@@ -20,11 +20,7 @@ pub fn cmd(
     if let Ok(mut child) = Command::new(editor).arg(str_file_path).spawn() {
         match child.wait() {
             Ok(_) => {
-                match user_cmd_runner.build(
-                    String::from("edit"),
-                    String::from("EDIT"),
-                    String::from("Manually edited tasks"),
-                ) {
+                match user_cmd_runner.build("edit", "EDIT", "Manually edited tasks") {
                     Ok(Some(mut cmd)) => {
                         user_cmd_runner.run(&mut cmd)?;
                     }

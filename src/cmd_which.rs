@@ -4,6 +4,6 @@ pub fn cmd(
     outputer: &mut dyn StringOutputer,
     taxfile_path_getter: &dyn TaxfilePathGetter,
 ) -> Result<(), String> {
-    outputer.info(taxfile_path_getter.get_taxfile_path()?);
+    outputer.info(&taxfile_path_getter.get_taxfile_path()?);
     Ok(())
 }

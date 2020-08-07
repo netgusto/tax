@@ -5,8 +5,8 @@ pub fn cmd(
     content_getter: &dyn ContentGetter,
 ) -> Result<(), String> {
     let content = content_getter.get_contents()?;
-    for line in &content {
-        outputer.info(line.to_string());
+    for line in content.lines() {
+        outputer.info(line);
     }
 
     Ok(())
