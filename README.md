@@ -14,7 +14,7 @@ Tasks are markdown:
 
 **tax** offers basic operations to manage a task list from the CLI.
 
-## Format
+## Task file format
 
 ### Task
 
@@ -80,7 +80,7 @@ Sections can be focused. When a section is focused, **tax** will display only th
 
 ## Commands
 
-#### `tax list [-a|--all]` (alias `tax`, `tax ls`)
+#### `tax list [-a|--all]`
 
 Alias `tax`, `tax ls`.
 
