@@ -17,10 +17,10 @@ pub fn cmd(
     };
 
     if focus && section.is_focused {
-        outputer.info(format!("Already focused: {}", section.plain_name));
+        outputer.info(&format!("Already focused: {}", section.plain_name));
         return Ok(());
     } else if !focus && !section.is_focused {
-        outputer.info(format!("Already blured: {}", section.plain_name));
+        outputer.info(&format!("Already blured: {}", section.plain_name));
         return Ok(());
     }
 
@@ -28,7 +28,7 @@ pub fn cmd(
     updated_section.is_focused = focus;
     updated_section.line = section_to_markdown(&updated_section);
 
-    outputer.info(format!(
+    outputer.info(&format!(
         "{}: {}",
         if focus { "Focused" } else { "Blurred" },
         &section.plain_name

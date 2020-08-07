@@ -6,7 +6,7 @@ pub fn cmd(
 ) -> Result<(), String> {
     let content = content_getter.get_contents()?;
     for line in content.lines() {
-        outputer.info(line.to_string());
+        outputer.info(line);
     }
 
     Ok(())

@@ -6,6 +6,8 @@ use crate::tasks::{
     text_get_comment, text_is_focused, text_remove_focus, text_replace_line_in_str,
 };
 
+use std::rc::Rc;
+
 pub enum AddPosition {
     Append,
     Prepend,
@@ -15,7 +17,7 @@ pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
     content_setter: &mut dyn ContentSetter,
-    _user_cmd_runner: &dyn UserCmdRunner,
+    user_cmd_runner: &dyn UserCmdRunner,
     task_formatter: &TaskFormatter,
     task_parts: Vec<String>,
     section_name: Option<String>,
@@ -33,7 +35,7 @@ pub fn cmd(
         name_without_comment
     };
 
-    let new_line = task_to_markdown(&Task {
+    let mut new_task = Task {
         name: task_name.clone(),
         plain_name: plain_name.clone(),
         comment: comment,
@@ -43,7 +45,11 @@ pub fn cmd(
         is_focused: is_task_focused,
         num: 0,
         section: None,
-    });
+    };
+
+    new_task.line = task_to_markdown(&new_task);
+    let mut added: bool = false;
+    let mut display_all: bool = false;
 
     match section_name {
         None => (),
@@ -51,91 +57,165 @@ pub fn cmd(
             // Section has been specified
             None => return Err(format!("Section not found: {}", name)), // but does not exist;
             Some(section) => {
-                return add_to_section(
-                    tasks,
+                match add_to_section(
+                    &tasks,
+                    &sections,
                     &section,
-                    &new_line,
+                    &new_task.line,
                     content_getter,
                     content_setter,
-                    pos,
-                );
+                    &pos,
+                ) {
+                    Err(e) => return Err(e),
+                    Ok((line_num, task_num)) => {
+                        added = true;
+                        new_task.line_num = line_num;
+                        new_task.num = task_num;
+
+                        // display all tasks if task added to section not focused
+                        display_all = match &focused_section {
+                            None => false,
+                            Some(f) => f.num != section.num,
+                        };
+                    }
+                };
             }
         },
     };
 
-    match focused_section {
-        None => (),
-        Some(s) => {
-            return add_to_section(
-                tasks,
-                s.as_ref(),
-                &new_line,
-                content_getter,
-                content_setter,
-                pos,
-            );
-        }
-    };
+    if !added {
+        match focused_section {
+            None => (),
+            Some(s) => {
+                match add_to_section(
+                    &tasks,
+                    &sections,
+                    s.as_ref(),
+                    &new_task.line,
+                    content_getter,
+                    content_setter,
+                    &pos,
+                ) {
+                    Err(e) => return Err(e),
+                    Ok((line_num, task_num)) => {
+                        added = true;
+                        new_task.line_num = line_num;
+                        new_task.num = task_num;
+                    }
+                }
+            }
+        };
+    }
 
-    let (line_num, _task_num, _operation) = if tasks.len() == 0 {
-        (1, 1, "APPEND".to_string())
-    } else {
+    if !added {
+        let (line_num, task_num) = if tasks.len() == 0 {
+            (1, 1)
+        } else {
+            match &pos {
+                &AddPosition::Prepend => (tasks[0].line_num, 1),
+                &AddPosition::Append => (
+                    tasks[tasks.len() - 1].line_num + 1,
+                    tasks[tasks.len() - 1].num + 1,
+                ),
+            }
+        };
+
+        let new_content =
+            text_add_line_in_str(&content_getter.get_contents()?, line_num, &new_task.line);
+        content_setter.set_contents(new_content)?;
+
+        new_task.line_num = line_num;
+        new_task.num = task_num;
+    }
+
+    match call_user_cmd_runner(
+        user_cmd_runner,
         match pos {
-            AddPosition::Prepend => (tasks[0].line_num, 1, "PREPEND".to_string()),
-            AddPosition::Append => (
-                tasks[tasks.len() - 1].line_num + 1,
-                tasks[tasks.len() - 1].num + 1,
-                "APPEND".to_string(),
-            ),
-        }
+            AddPosition::Prepend => "PREPEND",
+            AddPosition::Append => "APPEND",
+        },
+        &new_task,
+    ) {
+        Err(e) => return Err(e),
+        Ok(_) => (),
     };
 
-    let result = text_add_line_in_str(&content_getter.get_contents()?, line_num, &new_line);
-    content_setter.set_contents(result)?;
+    cmd_list::cmd(outputer, content_getter, task_formatter, display_all) // FIXME: all or not depending of whether the task is in displayed section
+}
 
-    // FIXME: enable user_cmd_runner
-    // match user_cmd_runner.build(
-    //     String::from("add"),
-    //     operation,
-    //     format!("Added \"{}\"", task_name),
-    // ) {
-    //     Ok(Some(mut cmd)) => {
-    //         user_cmd_runner.run(user_cmd_runner.env_single_task(new_task, &mut cmd))?;
-    //     }
-    //     Ok(None) => (),
-    //     Err(e) => return Err(e),
-    // };
-
-    cmd_list::cmd(outputer, content_getter, task_formatter)
+fn call_user_cmd_runner(
+    user_cmd_runner: &dyn UserCmdRunner,
+    operation: &str,
+    task: &Task,
+) -> Result<(), String> {
+    match user_cmd_runner.build("add", operation, &format!("Added \"{}\"", task.name)) {
+        Ok(Some(mut cmd)) => user_cmd_runner.run(user_cmd_runner.env_single_task(task, &mut cmd)),
+        Ok(None) => Ok(()),
+        Err(e) => Err(e),
+    }
 }
 
 fn add_to_section(
-    tasks: Vec<Task>,
+    tasks: &Vec<Task>,
+    sections: &Vec<Rc<Section>>,
     section: &Section,
     new_line: &str,
     content_getter: &dyn ContentGetter,
     content_setter: &mut dyn ContentSetter,
-    pos: AddPosition,
-) -> Result<(), String> {
+    pos: &AddPosition,
+) -> Result<(usize, usize), String> {
     // Add task to section
     let section_tasks = filter_tasks_in_section(&tasks, section);
 
+    let content = match content_getter.get_contents() {
+        Err(e) => return Err(e),
+        Ok(content) => content,
+    };
+
+    let line_num: usize;
+    let task_num: usize;
+    let new_lines: String;
+    let new_content: String;
+
     if section_tasks.len() == 0 {
-        // Section is empty;
+        task_num = if section.num == 1 {
+            1
+        } else {
+            // Find previous task num!
+            let mut cur_section_num = section.num - 1;
+            let mut found: Option<usize> = None;
 
-        let new_lines = format!("\n{}", new_line);
-        let result = text_add_line_in_str(
-            &content_getter.get_contents()?,
-            section.line_num_end + 1,
-            &new_lines,
-        );
+            while cur_section_num >= 1 {
+                let tasks_in_cur_section =
+                    filter_tasks_in_section(&tasks, sections[cur_section_num].as_ref());
+                if tasks_in_cur_section.len() > 0 {
+                    found = Some(match pos {
+                        AddPosition::Append => {
+                            tasks_in_cur_section[tasks_in_cur_section.len() - 1].num + 1
+                        }
+                        AddPosition::Prepend => tasks_in_cur_section[0].num,
+                    });
+                    break;
+                }
 
-        return content_setter.set_contents(result);
+                cur_section_num -= 1;
+            }
+
+            match found {
+                None => 1,
+                Some(n) => n,
+            }
+        };
+
+        new_lines = format!("\n{}", new_line);
+        line_num = section.line_num_end + 1;
+        new_content = text_add_line_in_str(&content, line_num, &new_lines);
     } else {
-        let (new_lines, line_num) = match pos {
+        let (new_lines_tmp, line_num_tmp, task_num_tmp) = match pos {
             AddPosition::Prepend => (
                 format!("{}\n{}", new_line, section_tasks[0].line),
                 section_tasks[0].line_num,
+                section_tasks[0].num,
             ),
             AddPosition::Append => (
                 format!(
@@ -144,13 +224,18 @@ fn add_to_section(
                     new_line,
                 ),
                 section_tasks[section_tasks.len() - 1].line_num,
+                section_tasks[section_tasks.len() - 1].num + 1,
             ),
         };
+        new_lines = new_lines_tmp;
+        line_num = line_num_tmp;
+        task_num = task_num_tmp;
+        new_content = text_replace_line_in_str(&content, line_num, &new_lines);
+    }
 
-        let result =
-            text_replace_line_in_str(&content_getter.get_contents()?, line_num, &new_lines);
-
-        return content_setter.set_contents(result);
+    match content_setter.set_contents(new_content) {
+        Err(e) => Err(e),
+        Ok(()) => Ok((line_num, task_num)),
     }
 }
 

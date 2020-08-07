@@ -75,12 +75,12 @@ impl TaskFormatter {
 }
 
 pub trait StringOutputer {
-    fn info(&mut self, s: String) -> ();
+    fn info(&mut self, s: &str) -> ();
 }
 
 pub struct StringOutputerReal {}
 impl StringOutputer for StringOutputerReal {
-    fn info(&mut self, s: String) -> () {
+    fn info(&mut self, s: &str) -> () {
         println!("{}", s);
     }
 }
@@ -175,18 +175,13 @@ pub struct UserCmdRunnerReal {
 }
 
 pub trait UserCmdRunner {
-    fn env_single_task<'a>(&self, task: Task, cmd: &'a mut Command) -> &'a mut Command;
-    fn build(
-        &self,
-        cmd: String,
-        operation: String,
-        message: String,
-    ) -> Result<Option<Command>, String>;
+    fn env_single_task<'a>(&self, task: &Task, cmd: &'a mut Command) -> &'a mut Command;
+    fn build(&self, cmd: &str, operation: &str, message: &str) -> Result<Option<Command>, String>;
     fn run(&self, cmd: &mut Command) -> Result<(), String>;
 }
 
 impl UserCmdRunner for UserCmdRunnerReal {
-    fn env_single_task<'a>(&self, task: Task, cmd: &'a mut Command) -> &'a mut Command {
+    fn env_single_task<'a>(&self, task: &Task, cmd: &'a mut Command) -> &'a mut Command {
         cmd.env("TAX_TASK_NUM", format!("{}", task.num))
             .env("TAX_TASK_NAME", &task.name)
             .env("TAX_TASK_PLAIN_NAME", &task.plain_name)
@@ -196,12 +191,7 @@ impl UserCmdRunner for UserCmdRunnerReal {
             .env("TAX_TASK_FOCUSED", if task.is_focused { "1" } else { "0" })
     }
 
-    fn build(
-        &self,
-        cmd: String,
-        operation: String,
-        message: String,
-    ) -> Result<Option<Command>, String> {
+    fn build(&self, cmd: &str, operation: &str, message: &str) -> Result<Option<Command>, String> {
         let sh_path = match which::which("sh") {
             Ok(path) => path,
             Err(_) => return Err(String::from("Could not find sh")),

@@ -80,7 +80,7 @@ pub mod test {
         }
     }
     impl crate::services::StringOutputer for StringOutputerMock {
-        fn info(&mut self, s: String) -> () {
+        fn info(&mut self, s: &str) -> () {
             self.info_buf.push(String::from(format!("{}\n", s)));
         }
     }
@@ -97,11 +97,11 @@ pub mod test {
     }
 
     impl UserCmdRunner for UserCmdRunnerMock {
-        fn env_single_task<'a>(&self, _: Task, cmd: &'a mut Command) -> &'a mut Command {
+        fn env_single_task<'a>(&self, _: &Task, cmd: &'a mut Command) -> &'a mut Command {
             cmd
         }
 
-        fn build(&self, _: String, _: String, _: String) -> Result<Option<Command>, String> {
+        fn build(&self, _: &str, _: &str, _: &str) -> Result<Option<Command>, String> {
             Ok(None)
         }
 

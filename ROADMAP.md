@@ -10,13 +10,16 @@ Support for Sections within a single task file
 :  * when focus section, blur other focused sections
 :* current / cycle: pick only from focused task
 :* add, append: default top 1st section, bottom last section
-* add task --section Section => Add Task to section
+:* add task --section Section => Add Task to section
   * Add to section with better match
   * Or Index sections by letter; add a "Something"
   * added tasks are always added 2 lines below the last text line of the section, except if there's already a task in the section, in which case the position of this task will be the place of insertion
-* when add without --section, add to focused section if any
-* move task to section
-:* when focused, display only focused section in list (+hint "Other tasks in hidden sections...")
+:* when add without --section, add to focused section if any
+* when focused, display only focused section in list (+hint "Other tasks in hidden sections...")
+
+# Tax --all (also tax list --all)
+
+: Lists all the tasks, regardless of section focus
 
 # Scriptability
 
@@ -31,3 +34,4 @@ Support for Sections within a single task file
 # Log file
 
 * Integrate feature? Or let it rely on outside scripting?
+

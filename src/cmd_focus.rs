@@ -18,7 +18,7 @@ pub fn cmd(
     let task = &tasks[rank_one_based - 1];
 
     if task.is_checked {
-        outputer.info(format!(
+        outputer.info(&format!(
             "Task is completed, cannot proceed: {}",
             task_formatter.display_numbered_task(&task, use_sections)
         ));
@@ -26,13 +26,13 @@ pub fn cmd(
     }
 
     if focus && task.is_focused {
-        outputer.info(format!(
+        outputer.info(&format!(
             "Already focused: {}",
             task_formatter.display_numbered_task(&task, use_sections)
         ));
         return Ok(());
     } else if !focus && !task.is_focused {
-        outputer.info(format!(
+        outputer.info(&format!(
             "Already blured: {}",
             task_formatter.display_numbered_task(&task, use_sections)
         ));
@@ -58,23 +58,23 @@ pub fn cmd(
     let result = content_setter.set_contents(replaced_content);
 
     let action = if focus { "Focused" } else { "Blurred" };
-    outputer.info(format!(
+    outputer.info(&format!(
         "{}: {}",
         action,
         task_formatter.display_numbered_task(&updated_task, use_sections)
     ));
 
     match user_cmd_runner.build(
-        String::from("focus"),
-        String::from(if focus { "FOCUS" } else { "BLUR" }),
-        format!(
+        "focus",
+        if focus { "FOCUS" } else { "BLUR" },
+        &format!(
             "{} \"{}\"",
             if focus { "Focused" } else { "Blurred" },
             task.name
         ),
     ) {
         Ok(Some(mut cmd)) => {
-            user_cmd_runner.run(user_cmd_runner.env_single_task(updated_task, &mut cmd))?;
+            user_cmd_runner.run(user_cmd_runner.env_single_task(&updated_task, &mut cmd))?;
         }
         Ok(None) => (),
         Err(e) => return Err(e),

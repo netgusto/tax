@@ -33,6 +33,12 @@ fn get_arg_matches() -> ArgMatches<'static> {
     App::new("Tax")
         .version(crate_version!())
         .about("CLI Task List Manager")
+        .arg(
+            Arg::with_name("all")
+                .short("a")
+                .long("all")
+                .help("Print all open tasks regardless of section focus"),
+        )
         .subcommand(App::new("edit").about("Edit the current task list in $EDITOR"))
         .subcommand(
             App::new("focus").about("Focus the given task").arg(
@@ -76,7 +82,13 @@ fn get_arg_matches() -> ArgMatches<'static> {
         .subcommand(
             App::new("list")
                 .alias("ls")
-                .about("Print all the tasks of the list, completed or not"),
+                .about("Print all open tasks of the list, or the focused section if any")
+                .arg(
+                    Arg::with_name("all")
+                        .short("a")
+                        .long("all")
+                        .help("Print all open tasks regardless of section focus"),
+                ),
         )
         .subcommand(
             App::new("current").about("Print the first open (focused if any) task of the list"),
@@ -155,8 +167,16 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
         supports_colors: SHOULD_COLORIZE.should_colorize(),
     };
 
+    let all = matches.is_present("all");
+    if all {
+        match matches.subcommand() {
+            ("", _) | ("list", _) => (),
+            _ => return Err(String::from("-a, --all not implemented on this command")),
+        };
+    }
+
     match matches.subcommand() {
-        (_, None) => cmd_list::cmd(outputer, content_handler_ref, task_formatter),
+        ("", None) => cmd_list::cmd(outputer, content_handler_ref, task_formatter, all),
         ("edit", _) => cmd_edit::cmd(taxfile_path_getter, user_cmd_runner),
         ("focus", Some(info)) => {
             let to_focus = info.value_of("task-index").unwrap();
@@ -224,7 +244,12 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             false,
         ),
 
-        ("list", _) => cmd_list::cmd(outputer, content_handler_ref, task_formatter),
+        ("list", Some(info)) => cmd_list::cmd(
+            outputer,
+            content_handler_ref,
+            task_formatter,
+            info.is_present("all"),
+        ),
         ("current", _) => cmd_current::cmd(outputer, content_handler_ref, task_formatter, false),
         ("cycle", _) => cmd_current::cmd(outputer, content_handler_ref, task_formatter, true),
 

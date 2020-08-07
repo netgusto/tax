@@ -18,13 +18,13 @@ pub fn cmd(
     let task = &tasks[rank_one_based - 1];
 
     if checked && task.is_checked {
-        outputer.info(format!(
+        outputer.info(&format!(
             "Already checked: {}",
             task_formatter.display_numbered_task(&task, use_sections)
         ));
         return Ok(());
     } else if !checked && !task.is_checked {
-        outputer.info(format!(
+        outputer.info(&format!(
             "Already unckecked: {}",
             task_formatter.display_numbered_task(&task, use_sections)
         ));
@@ -36,7 +36,7 @@ pub fn cmd(
     updated_task.line = task_to_markdown(&updated_task);
 
     let action = if checked { "Checked" } else { "Unchecked" };
-    outputer.info(format!(
+    outputer.info(&format!(
         "{}: {}",
         action,
         task_formatter.display_numbered_task(&updated_task, use_sections)
@@ -51,16 +51,16 @@ pub fn cmd(
     let result = content_setter.set_contents(replaced_content);
 
     match user_cmd_runner.build(
-        String::from("check"),
-        String::from(if checked { "CHECK" } else { "UNCHECK" }),
-        format!(
+        "check",
+        if checked { "CHECK" } else { "UNCHECK" },
+        &format!(
             "Marked \"{}\" as {}",
             updated_task.name,
             if checked { "done" } else { "not done" }
         ),
     ) {
         Ok(Some(mut cmd)) => {
-            user_cmd_runner.run(user_cmd_runner.env_single_task(updated_task, &mut cmd))?;
+            user_cmd_runner.run(user_cmd_runner.env_single_task(&updated_task, &mut cmd))?;
         }
         Ok(None) => (),
         Err(e) => return Err(e),

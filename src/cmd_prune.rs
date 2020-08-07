@@ -11,7 +11,7 @@ pub fn cmd(
     let (tasks, use_sections, _, _) = get_closed_tasks(content_getter)?;
 
     if tasks.len() == 0 {
-        outputer.info("No task to prune".to_string());
+        outputer.info("No task to prune");
         return Ok(());
     }
 
@@ -26,13 +26,13 @@ pub fn cmd(
         if tasks.len() > 1 { "s" } else { "" }
     );
 
-    outputer.info(msg.clone());
+    outputer.info(&msg);
 
     for task in &tasks {
-        outputer.info(task_formatter.display_numbered_task(&task, use_sections))
+        outputer.info(&task_formatter.display_numbered_task(&task, use_sections))
     }
 
-    match user_cmd_runner.build(String::from("prune"), String::from("PRUNE"), msg) {
+    match user_cmd_runner.build("prune", "PRUNE", &msg) {
         Ok(Some(mut cmd)) => {
             user_cmd_runner.run(&mut cmd)?;
         }
