@@ -12,7 +12,7 @@ Tasks are markdown:
 - [ ] Send that email
 ```
 
-tax offers basic operations to manager a task list from the CLI.
+**tax** offers basic operations to manage a task list from the CLI.
 
 ## Format
 
@@ -63,7 +63,7 @@ A task file can optionnaly feature sections, subdivizing the task list in sub-li
 
 A section is denoted by a markdown Header of any level.
 
-When the task file contains only one section, tax will behave the same as without any section.
+When the task file contains only one section, **tax** will behave the same as without any section.
 
 ```
 # Job
@@ -76,7 +76,7 @@ When the task file contains only one section, tax will behave the same as withou
 - [ ] Prepare Korean BBQ
 ```
 
-Sections can be focused. When a section is focused, tax will display only the tasks it contains.
+Sections can be focused. When a section is focused, **tax** will display only the tasks it contains.
 
 ## Commands
 
@@ -133,7 +133,7 @@ Ex:
 - [ ] Some task
 ```
 
-When a section is focused, tax will display the tasks of this section only.
+When a section is focused, **tax** will display the tasks of this section only.
 
 #### `tax add [-s "section"|--section "section"] "The task"`
 
@@ -199,9 +199,9 @@ set -g status-right '[...your status config...] #(/path/to/tax cycle)'
 
 ## Color support
 
-If tax is running in the context of a TTY, it will emit ANSI escape sequences to display focused tasks in bold font, instead of markdown bold markup.
+If **tax** is running in the context of a TTY, it will emit ANSI escape sequences to display focused tasks in bold font, instead of markdown bold markup.
 
-If tax is not running in a TTY (for instance, in a shell `$PS1`), emitting ANSI escape sequences can be forced by setting the environment variable `CLICOLOR_FORCE=1`.
+If **tax** is not running in a TTY (for instance, in a shell `$PS1`), emitting ANSI escape sequences can be forced by setting the environment variable `CLICOLOR_FORCE=1`.
 
 You can disable all ANSI escape sequences by setting the environment variable `NO_COLOR=1`.
 
@@ -209,9 +209,9 @@ Note: tmux status line does not interpret ANSI escape sequences (not a TTY).
 
 ### React to changes
 
-If `$TAX_CHANGE_CMD` is set in the environment and contains a valid command, tax will execute it as a `sh` command after every change it makes to your task file.
+If `$TAX_CHANGE_CMD` is set in the environment and contains a valid command, **tax** will execute it as a `sh` command after every change it makes to your task file.
 
-tax exposes a set of environment variables to `$TAX_CHANGE_CMD` to provide information about the change.
+**tax** exposes a set of environment variables to `$TAX_CHANGE_CMD` to provide information about the change.
 
 * **For all tax commands:**
   * `$TAX_FILE`: the absolute path of the changed tasks file
