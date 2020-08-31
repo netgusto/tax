@@ -16,6 +16,15 @@ Tasks are markdown:
 
 ![](assets/demo.gif)
 
+
+## Build/Install
+
+Building and installing requires Rust: https://www.rust-lang.org/tools/install
+
+```sh
+cargo install tax
+```
+
 ## Task file format
 
 ### Task
@@ -153,25 +162,17 @@ Otherwise, the task will be added at the top of the task list.
 
 Like `tax add`, but appends the task to the list instead of pushing it on top.
 
-### `tax prune`
+#### `tax prune`
 
 Removes all checked tasks from the task list.
 
-### `tax edit`
+#### `tax edit`
 
 Opens the current task file in `$EDITOR`.
 
-### `tax which`
+#### `tax which`
 
 Tells which tasks file is currently in use. Useful for scripting.
-
-## Build/Install
-
-Building and installing requires Rust: https://www.rust-lang.org/tools/install
-
-```sh
-cargo install tax
-```
 
 ## Use
 
