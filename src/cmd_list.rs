@@ -14,23 +14,20 @@ pub fn cmd(
     let filtered_tasks = if !all && use_sections && focused_section != None {
         let focused_section_unwrapped = focused_section.unwrap();
         let focused_section_ref = focused_section_unwrapped.as_ref();
-        match filter_tasks_in_section(&open_tasks, focused_section_ref) {
-            ftasks => {
-                let nb_diff = open_tasks.len() - ftasks.len();
-
-                other_tasks_hint = if nb_diff > 0 {
-                    Some(format!(
-                        "\n{} other open task{} outside of \"{}\".",
-                        nb_diff,
-                        if nb_diff > 1 { "s" } else { "" },
-                        focused_section_ref.plain_name,
-                    ))
-                } else {
-                    None
-                };
-
-                ftasks
-            }
+        let ftasks = filter_tasks_in_section(&open_tasks, focused_section_ref);
+        {
+            let nb_diff = open_tasks.len() - ftasks.len();
+            other_tasks_hint = if nb_diff > 0 {
+                Some(format!(
+                    "\n{} other open task{} outside of \"{}\".",
+                    nb_diff,
+                    if nb_diff > 1 { "s" } else { "" },
+                    focused_section_ref.plain_name,
+                ))
+            } else {
+                None
+            };
+            ftasks
         }
     } else {
         open_tasks
@@ -66,7 +63,7 @@ pub fn cmd(
             }
         }
 
-        outputer.info(&task_formatter.display_numbered_task(&task, false)); // false: disable inline section name, as header is displayed in list
+        outputer.info(&task_formatter.display_numbered_task(&task, false, true)); // false: disable inline section name, as header is displayed in list
     }
 
     match other_tasks_hint {

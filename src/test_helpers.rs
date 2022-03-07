@@ -5,12 +5,12 @@ pub mod test {
     use std::process::Command;
 
     pub fn env_getter_none(_: &str) -> Option<String> {
-        return None;
+        None
     }
 
     #[allow(dead_code)]
     pub fn home_getter_guybrush() -> Option<std::path::PathBuf> {
-        return Some(std::path::PathBuf::from("/home/guybrush"));
+        Some(std::path::PathBuf::from("/home/guybrush"))
     }
 
     #[allow(dead_code)]
@@ -30,7 +30,7 @@ pub mod test {
     impl ContentGetterMock {
         #[allow(dead_code)]
         pub fn new(outcome: Result<String, String>) -> Self {
-            return ContentGetterMock { outcome: outcome };
+            ContentGetterMock { outcome }
         }
     }
 
@@ -49,17 +49,17 @@ pub mod test {
     }
     impl ContentSetterMock {
         pub fn new(outcome: Result<(), String>) -> Self {
-            return ContentSetterMock {
+            ContentSetterMock {
                 content: None,
-                outcome: outcome,
-            };
+                outcome,
+            }
         }
     }
 
     impl crate::services::ContentSetter for ContentSetterMock {
         fn set_contents(&mut self, contents: String) -> Result<(), String> {
             self.content = Some(contents);
-            return self.outcome.clone();
+            self.outcome.clone()
         }
     }
 
@@ -72,7 +72,7 @@ pub mod test {
     impl StringOutputerMock {
         #[allow(dead_code)]
         pub fn new() -> Self {
-            return StringOutputerMock { info_buf: vec![] };
+            StringOutputerMock { info_buf: vec![] }
         }
         #[allow(dead_code)]
         pub fn get_info(&self) -> String {
@@ -80,8 +80,8 @@ pub mod test {
         }
     }
     impl crate::services::StringOutputer for StringOutputerMock {
-        fn info(&mut self, s: &str) -> () {
-            self.info_buf.push(String::from(format!("{}\n", s)));
+        fn info(&mut self, s: &str) {
+            self.info_buf.push(format!("{}\n", s));
         }
     }
 

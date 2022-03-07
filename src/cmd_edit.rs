@@ -9,7 +9,7 @@ pub fn cmd(
     let str_file_path = taxfile_path_getter.get_taxfile_path().unwrap();
 
     let res = env::var("EDITOR");
-    if !res.is_ok() {
+    if res.is_err() {
         return Err(String::from(
             "Please set $EDITOR in environment to use \"edit\".",
         ));

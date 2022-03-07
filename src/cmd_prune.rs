@@ -10,12 +10,12 @@ pub fn cmd(
 ) -> Result<(), String> {
     let (tasks, use_sections, _, _) = get_closed_tasks(content_getter)?;
 
-    if tasks.len() == 0 {
+    if tasks.is_empty() {
         outputer.info("No task to prune");
         return Ok(());
     }
 
-    let line_nums: Vec<usize> = (&tasks).into_iter().map(|t| t.line_num).collect();
+    let line_nums: Vec<usize> = (&tasks).iter().map(|t| t.line_num).collect();
     let pruned_content = text_remove_lines_in_str(&content_getter.get_contents()?, line_nums)?;
 
     content_setter.set_contents(pruned_content)?;
@@ -29,7 +29,7 @@ pub fn cmd(
     outputer.info(&msg);
 
     for task in &tasks {
-        outputer.info(&task_formatter.display_numbered_task(&task, use_sections))
+        outputer.info(&task_formatter.display_numbered_task(task, use_sections, true))
     }
 
     match user_cmd_runner.build("prune", "PRUNE", &msg) {

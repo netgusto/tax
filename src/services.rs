@@ -14,20 +14,19 @@ impl TaskFormatter {
     #[allow(dead_code)]
     pub fn new(supports_colors: bool) -> Self {
         TaskFormatter {
-            supports_colors: supports_colors,
+            supports_colors,
         }
     }
 
-    pub fn display_numbered_task(&self, task: &Task, use_sections: bool) -> String {
+    pub fn display_numbered_task(&self, task: &Task, use_sections: bool, use_styles: bool) -> String {
         format!(
             "{} {}{}",
             self.display_task_num(task),
-            self.display_task_name(task),
             if use_sections {
                 match &task.section {
                     Some(rc) => format!(
-                        " ~ {}",
-                        if task.section.as_ref().unwrap().is_focused {
+                        "{} ~ ",
+                        if use_styles && task.section.as_ref().unwrap().is_focused {
                             self.display_bold(&rc.plain_name)
                         } else {
                             rc.plain_name.clone()
@@ -38,6 +37,7 @@ impl TaskFormatter {
             } else {
                 "".to_string()
             },
+            self.display_task_name(task, use_styles),
         )
     }
 
@@ -57,11 +57,11 @@ impl TaskFormatter {
         }
     }
 
-    pub fn display_task_name(&self, task: &Task) -> String {
-        if task.is_focused {
+    pub fn display_task_name(&self, task: &Task, use_styles: bool) -> String {
+        if use_styles && task.is_focused {
             self.display_bold(&task.plain_name)
         } else {
-            task.name.clone()
+            task.plain_name.clone()
         }
     }
 
@@ -75,12 +75,12 @@ impl TaskFormatter {
 }
 
 pub trait StringOutputer {
-    fn info(&mut self, s: &str) -> ();
+    fn info(&mut self, s: &str);
 }
 
 pub struct StringOutputerReal {}
 impl StringOutputer for StringOutputerReal {
-    fn info(&mut self, s: &str) -> () {
+    fn info(&mut self, s: &str) {
         println!("{}", s);
     }
 }
@@ -95,10 +95,7 @@ pub fn env_getter_real(name: &str) -> Option<String> {
 
 pub type HomeGetter = fn() -> Option<PathBuf>;
 pub fn home_getter_real() -> Option<PathBuf> {
-    match dirs::home_dir() {
-        None => return None,
-        Some(h) => Some(h),
-    }
+    dirs::home_dir()
 }
 
 pub trait TaxfilePathGetter {
@@ -211,7 +208,7 @@ impl UserCmdRunner for UserCmdRunnerReal {
                     .env("TAX_CMD", cmd)
                     .env("TAX_OPERATION", operation)
                     .env("TAX_MESSAGE", message);
-                return Ok(Some(cmd_obj));
+                Ok(Some(cmd_obj))
             }
             None => Ok(None),
         }
@@ -231,7 +228,7 @@ impl UserCmdRunner for UserCmdRunnerReal {
 fn get_env_var_if_not_empty(name: &str, get_env: EnvGetter) -> Option<String> {
     match (get_env)(name) {
         Some(v) => {
-            if v.trim().len() == 0 {
+            if v.trim().is_empty() {
                 None
             } else {
                 Some(v)
