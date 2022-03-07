@@ -21,7 +21,7 @@ pub fn get_current_task(
     let section_tasks = if use_sections && focused_section != None {
         open_tasks
             .into_iter()
-            .filter(|t| filter_task_in_section_cbk(&t, focused_section.clone().unwrap().as_ref()))
+            .filter(|t| filter_task_in_section_cbk(t, focused_section.clone().unwrap().as_ref()))
             .collect()
     } else {
         open_tasks
@@ -29,11 +29,11 @@ pub fn get_current_task(
 
     let focused_tasks = filter_focused_tasks(&section_tasks, true);
 
-    if focused_tasks.len() > 0 {
+    if !focused_tasks.is_empty() {
         return Ok(Some((focused_tasks[0].clone(), use_sections)));
     }
 
-    if section_tasks.len() == 0 {
+    if section_tasks.is_empty() {
         return Ok(None);
     }
 
@@ -55,9 +55,11 @@ pub fn get_current_task(
     Ok(Some((section_tasks[0].clone(), use_sections)))
 }
 
+type AllTasks = (Vec<Task>, bool, Vec<Rc<Section>>, Option<Rc<Section>>);
+
 pub fn get_all_tasks(
     content_getter: &dyn ContentGetter,
-) -> Result<(Vec<Task>, bool, Vec<Rc<Section>>, Option<Rc<Section>>), String> {
+) -> Result<AllTasks, String> {
     let mut tasks: Vec<Task> = Vec::new();
     let mut sections: Vec<Rc<Section>> = Vec::new();
 
@@ -101,11 +103,11 @@ pub fn get_all_tasks(
 
                 let section = Rc::from(Section {
                     name: section_name.to_string(),
-                    plain_name: plain_name,
-                    is_focused: is_focused,
+                    plain_name,
+                    is_focused,
                     num: section_num,
                     line: line.to_string(),
-                    line_num: line_num,
+                    line_num,
                     line_num_end: 0,
                     level: header_markup.len(),
                 });
@@ -135,10 +137,10 @@ pub fn get_all_tasks(
                     } else {
                         name_without_comment
                     },
-                    comment: comment,
+                    comment,
                     num: task_num,
                     is_checked: text_is_check_symbol(check_symbol),
-                    line_num: line_num,
+                    line_num,
                     line: line.to_string(),
                     is_focused: is_task_focused,
                     section: current_section.clone(),
@@ -174,7 +176,7 @@ pub fn get_all_tasks(
 
 pub fn get_open_tasks(
     content_getter: &dyn ContentGetter,
-) -> Result<(Vec<Task>, bool, Vec<Rc<Section>>, Option<Rc<Section>>), String> {
+) -> Result<AllTasks, String> {
     match get_all_tasks(content_getter) {
         Ok((tasks, use_sections, sections, focused_section)) => Ok((
             filter_open_tasks(&tasks, true),
@@ -188,7 +190,7 @@ pub fn get_open_tasks(
 
 pub fn get_closed_tasks(
     content_getter: &dyn ContentGetter,
-) -> Result<(Vec<Task>, bool, Vec<Rc<Section>>, Option<Rc<Section>>), String> {
+) -> Result<AllTasks, String> {
     match get_all_tasks(content_getter) {
         Ok((tasks, use_sections, sections, focused_section)) => Ok((
             filter_open_tasks(&tasks, false),
@@ -200,27 +202,24 @@ pub fn get_closed_tasks(
     }
 }
 
-pub fn filter_open_tasks(tasks: &Vec<Task>, open: bool) -> Vec<Task> {
+pub fn filter_open_tasks(tasks: &[Task], open: bool) -> Vec<Task> {
     tasks
-        .into_iter()
-        .filter(|t| filter_open_task_cbk(&t, open))
-        .map(|t| t.clone())
+        .iter()
+        .filter(|t| filter_open_task_cbk(t, open)).cloned()
         .collect()
 }
 
-pub fn filter_focused_tasks(tasks: &Vec<Task>, focused: bool) -> Vec<Task> {
+pub fn filter_focused_tasks(tasks: &[Task], focused: bool) -> Vec<Task> {
     tasks
-        .into_iter()
-        .filter(|t| filter_focused_task_cbk(&t, focused))
-        .map(|t| t.clone())
+        .iter()
+        .filter(|t| filter_focused_task_cbk(t, focused)).cloned()
         .collect()
 }
 
-pub fn filter_tasks_in_section(tasks: &Vec<Task>, section: &Section) -> Vec<Task> {
+pub fn filter_tasks_in_section(tasks: &[Task], section: &Section) -> Vec<Task> {
     tasks
-        .into_iter()
-        .filter(|t| filter_task_in_section_cbk(t, section))
-        .map(|t| t.clone())
+        .iter()
+        .filter(|t| filter_task_in_section_cbk(t, section)).cloned()
         .collect()
 }
 
@@ -248,7 +247,7 @@ pub fn filter_task_in_section_cbk(task: &Task, section: &Section) -> bool {
 }
 
 pub fn text_is_check_symbol(s: &str) -> bool {
-    return s == "x";
+    s == "x"
 }
 
 pub fn section_to_markdown(section: &Section) -> String {
@@ -325,7 +324,7 @@ pub fn text_remove_lines_in_str(s: &str, line_nums: Vec<usize>) -> Result<String
 pub fn text_replace_line_in_str(
     s: &str,
     replace_line_num: usize,
-    replacement_line: &String,
+    replacement_line: &str,
 ) -> String {
     let mut line_num = 1;
 
@@ -369,7 +368,7 @@ pub fn text_add_line_in_str(s: &str, add_line_num: usize, added_line: &str) -> S
     content
 }
 
-pub fn search_section(search: &str, sections: &Vec<Rc<Section>>) -> Option<Section> {
+pub fn search_section(search: &str, sections: &[Rc<Section>]) -> Option<Section> {
     let section_name_lower = search.to_lowercase();
 
     let mut partial_match: Option<Section> = None;
@@ -388,11 +387,8 @@ pub fn search_section(search: &str, sections: &Vec<Rc<Section>>) -> Option<Secti
     }
 
     match exact_match {
-        None => match partial_match {
-            None => None,
-            Some(section) => Some(section),
-        },
-        Some(section) => Some(section),
+        None => partial_match,
+        _ => exact_match,
     }
 }
 
@@ -407,19 +403,17 @@ mod tests {
         let (expected_markdown, tasks) = get_std_test_tasks();
         let lines: Vec<&str> = expected_markdown.lines().collect();
 
-        let mut i = 0;
-        for task in tasks {
-            assert_eq!(lines[i].clone(), task_to_markdown(&task));
-            i += 1;
+        for (i, task) in tasks.into_iter().enumerate() {
+            assert_eq!(lines[i], task_to_markdown(&task));
         }
     }
 
     #[test]
     fn test_is_check_symbol() {
-        assert_eq!(text_is_check_symbol(""), false);
-        assert_eq!(text_is_check_symbol("*"), false);
-        assert_eq!(text_is_check_symbol("x"), true);
-        assert_eq!(text_is_check_symbol("X"), false);
+        assert!(!text_is_check_symbol(""));
+        assert!(!text_is_check_symbol("*"));
+        assert!(text_is_check_symbol("x"));
+        assert!(!text_is_check_symbol("X"));
     }
 
     #[test]
@@ -427,7 +421,7 @@ mod tests {
         // Empty contents
         match get_all_tasks(&ContentGetterMock::new(Ok("".to_string()))) {
             Ok((tasks, _, _, _)) => assert_eq!(tasks, Vec::new()),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
 
         // Std contents
@@ -435,7 +429,7 @@ mod tests {
 
         match get_all_tasks(&ContentGetterMock::new(Ok(test_contents))) {
             Ok((tasks, _, _, _)) => assert_eq!(tasks, expected_tasks),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
     }
 
@@ -444,7 +438,7 @@ mod tests {
         // Empty contents
         match get_open_tasks(&ContentGetterMock::new(Ok("".to_string()))) {
             Ok((tasks, _, _, _)) => assert_eq!(tasks, Vec::new()),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
 
         // Std contents
@@ -460,7 +454,7 @@ mod tests {
                     expected_tasks[5].clone(),
                 ]
             ),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
     }
 
@@ -469,7 +463,7 @@ mod tests {
         // Empty contents
         match get_current_task(&ContentGetterMock::new(Ok("".to_string())), false) {
             Ok(task) => assert_eq!(task, None),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
 
         // Std contents
@@ -477,30 +471,26 @@ mod tests {
 
         match get_current_task(&ContentGetterMock::new(Ok(test_contents)), false) {
             Ok(task) => assert_eq!(task, Some((expected_tasks[1].clone(), false))),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
     }
 
     #[test]
     fn test_text_add_line_in_contents() {
-        match text_add_line_in_str("", 1, "Hello, World!") {
-            s => assert_eq!(s, "Hello, World!\n"),
-        }
 
-        match text_add_line_in_str("first line", 1, "Hello, World!") {
-            s => assert_eq!(s, "Hello, World!\nfirst line\n"),
-        }
+        let s = text_add_line_in_str("", 1, "Hello, World!");
+        assert_eq!(s, "Hello, World!\n");
 
-        match text_add_line_in_str("first line", 2, "Hello, World!") {
-            s => assert_eq!(s, "first line\nHello, World!\n"),
-        }
+        let s = text_add_line_in_str("first line", 1, "Hello, World!");
+        assert_eq!(s, "Hello, World!\nfirst line\n");
 
-        match text_add_line_in_str("first line\nlast line", 2, "Hello, World!") {
-            s => assert_eq!(s, "first line\nHello, World!\nlast line\n"),
-        }
+        let s = text_add_line_in_str("first line", 2, "Hello, World!");
+        assert_eq!(s, "first line\nHello, World!\n");
 
-        match text_add_line_in_str("# Header\n\n- [ ] Do the stuff", 3, "Hello, World!") {
-            s => assert_eq!(s, "# Header\n\nHello, World!\n- [ ] Do the stuff\n"),
-        }
+        let s = text_add_line_in_str("first line\nlast line", 2, "Hello, World!");
+        assert_eq!(s, "first line\nHello, World!\nlast line\n");
+
+        let s = text_add_line_in_str("# Header\n\n- [ ] Do the stuff", 3, "Hello, World!");
+        assert_eq!(s, "# Header\n\nHello, World!\n- [ ] Do the stuff\n");
     }
 }

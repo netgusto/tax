@@ -20,13 +20,13 @@ pub fn cmd(
     if checked && task.is_checked {
         outputer.info(&format!(
             "Already checked: {}",
-            task_formatter.display_numbered_task(&task, use_sections)
+            task_formatter.display_numbered_task(task, use_sections, true)
         ));
         return Ok(());
     } else if !checked && !task.is_checked {
         outputer.info(&format!(
             "Already unckecked: {}",
-            task_formatter.display_numbered_task(&task, use_sections)
+            task_formatter.display_numbered_task(task, use_sections, true)
         ));
         return Ok(());
     }
@@ -39,7 +39,7 @@ pub fn cmd(
     outputer.info(&format!(
         "{}: {}",
         action,
-        task_formatter.display_numbered_task(&updated_task, use_sections)
+        task_formatter.display_numbered_task(&updated_task, use_sections, true)
     ));
 
     let replaced_content = text_replace_line_in_str(

@@ -20,7 +20,7 @@ pub fn cmd(
     if task.is_checked {
         outputer.info(&format!(
             "Task is completed, cannot proceed: {}",
-            task_formatter.display_numbered_task(&task, use_sections)
+            task_formatter.display_numbered_task(task, use_sections, true)
         ));
         return Ok(());
     }
@@ -28,13 +28,13 @@ pub fn cmd(
     if focus && task.is_focused {
         outputer.info(&format!(
             "Already focused: {}",
-            task_formatter.display_numbered_task(&task, use_sections)
+            task_formatter.display_numbered_task(task, use_sections, true)
         ));
         return Ok(());
     } else if !focus && !task.is_focused {
         outputer.info(&format!(
             "Already blured: {}",
-            task_formatter.display_numbered_task(&task, use_sections)
+            task_formatter.display_numbered_task(task, use_sections, true)
         ));
         return Ok(());
     }
@@ -61,7 +61,7 @@ pub fn cmd(
     outputer.info(&format!(
         "{}: {}",
         action,
-        task_formatter.display_numbered_task(&updated_task, use_sections)
+        task_formatter.display_numbered_task(&updated_task, use_sections, true)
     ));
 
     match user_cmd_runner.build(

@@ -38,7 +38,7 @@ pub fn cmd(
     let mut new_task = Task {
         name: task_name.clone(),
         plain_name: plain_name.clone(),
-        comment: comment,
+        comment,
         line: String::from(""),
         line_num: 0,
         is_checked: false,
@@ -108,12 +108,12 @@ pub fn cmd(
     }
 
     if !added {
-        let (line_num, task_num) = if tasks.len() == 0 {
+        let (line_num, task_num) = if tasks.is_empty() {
             (1, 1)
         } else {
-            match &pos {
-                &AddPosition::Prepend => (tasks[0].line_num, 1),
-                &AddPosition::Append => (
+            match pos {
+                AddPosition::Prepend => (tasks[0].line_num, 1),
+                AddPosition::Append => (
                     tasks[tasks.len() - 1].line_num + 1,
                     tasks[tasks.len() - 1].num + 1,
                 ),
@@ -128,7 +128,7 @@ pub fn cmd(
         new_task.num = task_num;
     }
 
-    match call_user_cmd_runner(
+    if let Err(e) = call_user_cmd_runner(
         user_cmd_runner,
         match pos {
             AddPosition::Prepend => "PREPEND",
@@ -136,9 +136,8 @@ pub fn cmd(
         },
         &new_task,
     ) {
-        Err(e) => return Err(e),
-        Ok(_) => (),
-    };
+        return Err(e)
+    }
 
     cmd_list::cmd(outputer, content_getter, task_formatter, display_all) // FIXME: all or not depending of whether the task is in displayed section
 }
@@ -156,8 +155,8 @@ fn call_user_cmd_runner(
 }
 
 fn add_to_section(
-    tasks: &Vec<Task>,
-    sections: &Vec<Rc<Section>>,
+    tasks: &[Task],
+    sections: &[Rc<Section>],
     section: &Section,
     new_line: &str,
     content_getter: &dyn ContentGetter,
@@ -165,7 +164,7 @@ fn add_to_section(
     pos: &AddPosition,
 ) -> Result<(usize, usize), String> {
     // Add task to section
-    let section_tasks = filter_tasks_in_section(&tasks, section);
+    let section_tasks = filter_tasks_in_section(tasks, section);
 
     let content = match content_getter.get_contents() {
         Err(e) => return Err(e),
@@ -177,7 +176,7 @@ fn add_to_section(
     let new_lines: String;
     let new_content: String;
 
-    if section_tasks.len() == 0 {
+    if section_tasks.is_empty() {
         task_num = if section.num == 1 {
             1
         } else {
@@ -187,8 +186,8 @@ fn add_to_section(
 
             while cur_section_num >= 1 {
                 let tasks_in_cur_section =
-                    filter_tasks_in_section(&tasks, sections[cur_section_num].as_ref());
-                if tasks_in_cur_section.len() > 0 {
+                    filter_tasks_in_section(tasks, sections[cur_section_num].as_ref());
+                if !tasks_in_cur_section.is_empty() {
                     found = Some(match pos {
                         AddPosition::Append => {
                             tasks_in_cur_section[tasks_in_cur_section.len() - 1].num + 1
@@ -201,10 +200,7 @@ fn add_to_section(
                 cur_section_num -= 1;
             }
 
-            match found {
-                None => 1,
-                Some(n) => n,
-            }
+            found.unwrap_or(1)
         };
 
         new_lines = format!("\n{}", new_line);
@@ -270,7 +266,7 @@ mod tests {
                     "- [ ] **Some focused task** // with comments; see https://example.com\n"
                 ))
             ),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
     }
 
@@ -296,7 +292,7 @@ mod tests {
                 content_setter.content,
                 Some(String::from("- [ ] Some task\n- [ ] Existing task\n"))
             ),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
     }
 
@@ -322,7 +318,7 @@ mod tests {
                 content_setter.content,
                 Some(String::from("- [ ] Existing task\n- [ ] Some task\n"))
             ),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
     }
 
@@ -355,7 +351,7 @@ mod tests {
                     "# Section\n\n- [ ] Some task\n- [ ] Existing task\n"
                 ))
             ),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
     }
 
@@ -388,7 +384,7 @@ mod tests {
                     "# Section\n\n- [ ] Existing task\n- [ ] Some task\n"
                 ))
             ),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         }
     }
 }

@@ -154,7 +154,7 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
     };
 
     let user_cmd_runner = &UserCmdRunnerReal {
-        taxfile_path_getter: taxfile_path_getter,
+        taxfile_path_getter,
         get_env: env_getter_real,
     };
 
@@ -185,7 +185,7 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
         ("focus", Some(info)) => {
             let to_focus = info.value_of("task-index").unwrap();
 
-            return match to_focus.parse::<usize>() {
+            match to_focus.parse::<usize>() {
                 Ok(rank_one_based) => cmd_focus::cmd(
                     outputer,
                     content_handler_ref,
@@ -203,12 +203,12 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
                     to_focus.to_string(),
                     true,
                 ),
-            };
+            }
         }
         ("blur", Some(info)) => {
             let to_focus = info.value_of("task-index").unwrap();
 
-            return match to_focus.parse::<usize>() {
+            match to_focus.parse::<usize>() {
                 Ok(rank_one_based) => cmd_focus::cmd(
                     outputer,
                     content_handler_ref,
@@ -226,7 +226,7 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
                     to_focus.to_string(),
                     false,
                 ),
-            };
+            }
         }
 
         ("check", Some(info)) => cmd_check::cmd(
@@ -276,10 +276,7 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             user_cmd_runner,
             task_formatter,
             info.values_of_lossy("task-name").unwrap(),
-            match info.value_of_lossy("section") {
-                None => None,
-                Some(s) => Some(s.to_string()),
-            },
+            info.value_of_lossy("section").map(|s| s.to_string()),
             cmd_add::AddPosition::Prepend,
         ),
 
@@ -290,12 +287,9 @@ fn run_app(matches: ArgMatches) -> Result<(), String> {
             user_cmd_runner,
             task_formatter,
             info.values_of_lossy("task-name").unwrap(),
-            match info.value_of_lossy("section") {
-                None => None,
-                Some(s) => Some(s.to_string()),
-            },
+            info.value_of_lossy("section").map(|s| s.to_string()),
             cmd_add::AddPosition::Append,
         ),
-        _ => Err(format!("Unknown command")),
+        _ => Err("Unknown command".to_string()),
     }
 }
