@@ -18,7 +18,7 @@ pub fn cmd(
 mod tests {
 
     use super::*;
-    use crate::test_helpers::test::{get_std_test_contents, ContentGetterMock, StringOutputerMock};
+    use crate::test_helpers::test::{ContentGetterMock, StringOutputerMock, get_std_test_contents};
 
     #[test]
     fn test_cmd_current() {
@@ -41,10 +41,7 @@ mod tests {
             let content_getter_mock = &ContentGetterMock::new(Ok(test_contents));
 
             cmd(outputer_mock, content_getter_mock, task_formatter, false).unwrap();
-            assert_eq!(
-                outputer_mock.get_info(),
-                "[2] Standard unchecked focused\n"
-            );
+            assert_eq!(outputer_mock.get_info(), "[2] Standard unchecked focused\n");
         }
     }
 }

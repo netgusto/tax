@@ -1,8 +1,9 @@
 [package]
 name = "tax"
-version = "0.0.7"
+version = "0.0.8"
 authors = ["Jerome Schneider <mail@jeromeschneider.f>"]
-edition = "2018"
+edition = "2024"
+rust-version = "1.85"
 license = "MIT"
 description = "tax is a cli task list manager"
 homepage = "https://github.com/netgusto/tax"
@@ -13,8 +14,7 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 regex = "1"
-lazy_static = "1.4.0"
-dirs = "3.0.1"
-which = "4.0.1"
+dirs = "6"
+which = "7"
 colored = "2"
-clap = "2.33.1"
+clap = { version = "4", features = ["derive"] }

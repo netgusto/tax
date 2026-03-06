@@ -11,11 +11,10 @@ pub fn cmd(
 
     let mut other_tasks_hint: Option<String> = None;
 
-    let filtered_tasks = if !all && use_sections && focused_section != None {
-        let focused_section_unwrapped = focused_section.unwrap();
-        let focused_section_ref = focused_section_unwrapped.as_ref();
-        let ftasks = filter_tasks_in_section(&open_tasks, focused_section_ref);
-        {
+    let filtered_tasks = if !all && use_sections {
+        if let Some(ref focused) = focused_section {
+            let focused_section_ref = focused.as_ref();
+            let ftasks = filter_tasks_in_section(&open_tasks, focused_section_ref);
             let nb_diff = open_tasks.len() - ftasks.len();
             other_tasks_hint = if nb_diff > 0 {
                 Some(format!(
@@ -28,6 +27,8 @@ pub fn cmd(
                 None
             };
             ftasks
+        } else {
+            open_tasks
         }
     } else {
         open_tasks
@@ -63,7 +64,8 @@ pub fn cmd(
             }
         }
 
-        outputer.info(&task_formatter.display_numbered_task(&task, false, true)); // false: disable inline section name, as header is displayed in list
+        outputer.info(&task_formatter.display_numbered_task(&task, false, true));
+        // false: disable inline section name, as header is displayed in list
     }
 
     match other_tasks_hint {
@@ -77,7 +79,7 @@ pub fn cmd(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::test::{get_std_test_contents, ContentGetterMock, StringOutputerMock};
+    use crate::test_helpers::test::{ContentGetterMock, StringOutputerMock, get_std_test_contents};
 
     #[test]
     fn test_cmd_list() {

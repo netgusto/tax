@@ -13,12 +13,15 @@ pub struct TaskFormatter {
 impl TaskFormatter {
     #[allow(dead_code)]
     pub fn new(supports_colors: bool) -> Self {
-        TaskFormatter {
-            supports_colors,
-        }
+        TaskFormatter { supports_colors }
     }
 
-    pub fn display_numbered_task(&self, task: &Task, use_sections: bool, use_styles: bool) -> String {
+    pub fn display_numbered_task(
+        &self,
+        task: &Task,
+        use_sections: bool,
+        use_styles: bool,
+    ) -> String {
         format!(
             "{} {}{}",
             self.display_task_num(task),
@@ -87,10 +90,7 @@ impl StringOutputer for StringOutputerReal {
 
 pub type EnvGetter = fn(&str) -> Option<String>;
 pub fn env_getter_real(name: &str) -> Option<String> {
-    match env::var(name) {
-        Ok(v) => Some(v),
-        Err(_) => None,
-    }
+    env::var(name).ok()
 }
 
 pub type HomeGetter = fn() -> Option<PathBuf>;
@@ -166,8 +166,8 @@ impl ContentSetter for ContentHandlerReal {
     }
 }
 
-pub struct UserCmdRunnerReal {
-    pub taxfile_path_getter: &'static dyn TaxfilePathGetter,
+pub struct UserCmdRunnerReal<'a> {
+    pub taxfile_path_getter: &'a dyn TaxfilePathGetter,
     pub get_env: EnvGetter,
 }
 
@@ -177,7 +177,7 @@ pub trait UserCmdRunner {
     fn run(&self, cmd: &mut Command) -> Result<(), String>;
 }
 
-impl UserCmdRunner for UserCmdRunnerReal {
+impl UserCmdRunner for UserCmdRunnerReal<'_> {
     fn env_single_task<'a>(&self, task: &Task, cmd: &'a mut Command) -> &'a mut Command {
         cmd.env("TAX_TASK_NUM", format!("{}", task.num))
             .env("TAX_TASK_NAME", &task.name)
@@ -226,16 +226,7 @@ impl UserCmdRunner for UserCmdRunnerReal {
 }
 
 fn get_env_var_if_not_empty(name: &str, get_env: EnvGetter) -> Option<String> {
-    match (get_env)(name) {
-        Some(v) => {
-            if v.trim().is_empty() {
-                None
-            } else {
-                Some(v)
-            }
-        }
-        None => None,
-    }
+    (get_env)(name).filter(|v| !v.trim().is_empty())
 }
 
 #[cfg(test)]

@@ -15,7 +15,7 @@ pub fn cmd(
         return Ok(());
     }
 
-    let line_nums: Vec<usize> = (&tasks).iter().map(|t| t.line_num).collect();
+    let line_nums: Vec<usize> = tasks.iter().map(|t| t.line_num).collect();
     let pruned_content = text_remove_lines_in_str(&content_getter.get_contents()?, line_nums)?;
 
     content_setter.set_contents(pruned_content)?;

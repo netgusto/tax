@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-#[derive(std::clone::Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Task {
     pub num: usize,
     pub name: String,
@@ -13,7 +13,7 @@ pub struct Task {
     pub section: Option<Rc<Section>>,
 }
 
-#[derive(std::clone::Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Section {
     pub num: usize,
     pub name: String,

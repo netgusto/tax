@@ -2,15 +2,17 @@ use crate::model::{Section, Task};
 use crate::services::ContentGetter;
 use regex::Regex;
 use std::rc::Rc;
+use std::sync::LazyLock;
 use std::time::SystemTime;
 
-lazy_static! {
-    static ref TASK_LINE_REGEX: Regex =
-        Regex::new(r"(?m)^\s*(?:-|\*)\s+\[(x|\s*|>)\]\s+(.+?)$").unwrap();
-    static ref TASK_NAME_FOCUSED_REGEX: Regex = Regex::new(r"(?m)\*\*.+\*\*").unwrap();
-    static ref COMMENT_REGEX: Regex = Regex::new(r"(?m)^(.*?)[^:]//(.+?)$").unwrap();
-    static ref HEADER_REGEX: Regex = Regex::new(r"(?m)^(#{1,6})\s+(.*?)$").unwrap();
-}
+static TASK_LINE_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^\s*(?:-|\*)\s+\[(x|\s*|>)\]\s+(.+?)$").unwrap());
+static TASK_NAME_FOCUSED_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)\*\*.+\*\*").unwrap());
+static COMMENT_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^(.*?)[^:]//(.+?)$").unwrap());
+static HEADER_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^(#{1,6})\s+(.*?)$").unwrap());
 
 pub fn get_current_task(
     content_getter: &dyn ContentGetter,
@@ -18,7 +20,7 @@ pub fn get_current_task(
 ) -> Result<Option<(Task, bool)>, String> {
     let (open_tasks, use_sections, _, focused_section) = get_open_tasks(content_getter)?;
 
-    let section_tasks = if use_sections && focused_section != None {
+    let section_tasks = if use_sections && focused_section.is_some() {
         open_tasks
             .into_iter()
             .filter(|t| filter_task_in_section_cbk(t, focused_section.clone().unwrap().as_ref()))
@@ -57,9 +59,7 @@ pub fn get_current_task(
 
 type AllTasks = (Vec<Task>, bool, Vec<Rc<Section>>, Option<Rc<Section>>);
 
-pub fn get_all_tasks(
-    content_getter: &dyn ContentGetter,
-) -> Result<AllTasks, String> {
+pub fn get_all_tasks(content_getter: &dyn ContentGetter) -> Result<AllTasks, String> {
     let mut tasks: Vec<Task> = Vec::new();
     let mut sections: Vec<Rc<Section>> = Vec::new();
 
@@ -72,101 +72,89 @@ pub fn get_all_tasks(
     let mut building_section: Option<Rc<Section>> = None;
 
     for line in content_getter.get_contents()?.lines() {
-        match HEADER_REGEX.captures(line) {
-            None => (),
-            Some(cap) => {
-                match building_section {
-                    None => (), // first section being built,
-                    Some(s) => {
-                        let mut section = s.as_ref().clone();
-                        section.line_num_end = line_num - 1;
+        if let Some(cap) = HEADER_REGEX.captures(line) {
+            if let Some(s) = building_section {
+                let mut section = s.as_ref().clone();
+                section.line_num_end = line_num - 1;
 
-                        let section_rc = Rc::from(section);
+                let section_rc = Rc::from(section);
 
-                        if section_rc.is_focused && focused_section == None {
-                            focused_section = Some(section_rc.clone());
-                        }
-
-                        sections.push(section_rc);
-                        section_num += 1;
-                    }
+                if section_rc.is_focused && focused_section.is_none() {
+                    focused_section = Some(section_rc.clone());
                 }
 
-                let header_markup = cap[1].trim();
-                let section_name = cap[2].trim();
-                let is_focused = text_is_focused(section_name);
-                let plain_name = if is_focused {
-                    text_remove_focus(section_name)
+                sections.push(section_rc);
+                section_num += 1;
+            }
+
+            let header_markup = cap[1].trim();
+            let section_name = cap[2].trim();
+            let is_focused = text_is_focused(section_name);
+            let plain_name = if is_focused {
+                text_remove_focus(section_name)
+            } else {
+                section_name.to_string()
+            };
+
+            let section = Rc::from(Section {
+                name: section_name.to_string(),
+                plain_name,
+                is_focused,
+                num: section_num,
+                line: line.to_string(),
+                line_num,
+                line_num_end: 0,
+                level: header_markup.len(),
+            });
+
+            current_section = Some(section.clone());
+            building_section = Some(section);
+
+            line_num += 1;
+            continue;
+        }
+
+        if let Some(cap) = TASK_LINE_REGEX.captures(line) {
+            let check_symbol = cap[1].trim();
+            let name = String::from(&cap[2]);
+            let trimmed_name = name.trim();
+
+            let (name_without_comment, comment) = text_get_comment(trimmed_name);
+
+            let is_task_focused = text_is_focused(name_without_comment.as_str());
+            tasks.push(Task {
+                name: name_without_comment.clone(),
+                plain_name: if is_task_focused {
+                    text_remove_focus(name_without_comment.as_str())
                 } else {
-                    section_name.to_string()
-                };
+                    name_without_comment
+                },
+                comment,
+                num: task_num,
+                is_checked: text_is_check_symbol(check_symbol),
+                line_num,
+                line: line.to_string(),
+                is_focused: is_task_focused,
+                section: current_section.clone(),
+            });
 
-                let section = Rc::from(Section {
-                    name: section_name.to_string(),
-                    plain_name,
-                    is_focused,
-                    num: section_num,
-                    line: line.to_string(),
-                    line_num,
-                    line_num_end: 0,
-                    level: header_markup.len(),
-                });
-
-                current_section = Some(section.clone());
-                building_section = Some(section);
-
-                line_num += 1;
-                continue;
-            }
-        };
-
-        match TASK_LINE_REGEX.captures(line) {
-            None => (),
-            Some(cap) => {
-                let check_symbol = cap[1].trim();
-                let name = String::from(&cap[2]);
-                let trimmed_name = name.trim();
-
-                let (name_without_comment, comment) = text_get_comment(trimmed_name);
-
-                let is_task_focused = text_is_focused(name_without_comment.as_str());
-                tasks.push(Task {
-                    name: name_without_comment.clone(),
-                    plain_name: if is_task_focused {
-                        text_remove_focus(name_without_comment.as_str())
-                    } else {
-                        name_without_comment
-                    },
-                    comment,
-                    num: task_num,
-                    is_checked: text_is_check_symbol(check_symbol),
-                    line_num,
-                    line: line.to_string(),
-                    is_focused: is_task_focused,
-                    section: current_section.clone(),
-                });
-
-                task_num += 1;
-            }
+            task_num += 1;
         }
 
         line_num += 1;
     }
 
-    match building_section {
-        None => (),
-        Some(s) => {
-            let mut section = s.as_ref().clone();
-            section.line_num_end = line_num - 1;
+    if let Some(s) = building_section {
+        let mut section = s.as_ref().clone();
+        section.line_num_end = line_num - 1;
 
-            let section_rc = Rc::from(section);
+        let section_rc = Rc::from(section);
 
-            if section_rc.is_focused && focused_section == None {
-                focused_section = Some(section_rc.clone());
-            }
-
-            sections.push(section_rc);
+        if section_rc.is_focused && focused_section.is_none() {
+            focused_section = Some(section_rc.clone());
         }
+
+        sections.push(section_rc);
     }
 
     let use_section = sections.len() > 1;
@@ -174,52 +162,47 @@ pub fn get_all_tasks(
     Ok((tasks, use_section, sections, focused_section))
 }
 
-pub fn get_open_tasks(
-    content_getter: &dyn ContentGetter,
-) -> Result<AllTasks, String> {
-    match get_all_tasks(content_getter) {
-        Ok((tasks, use_sections, sections, focused_section)) => Ok((
-            filter_open_tasks(&tasks, true),
-            use_sections,
-            sections,
-            focused_section,
-        )),
-        Err(msg) => Err(msg),
-    }
+pub fn get_open_tasks(content_getter: &dyn ContentGetter) -> Result<AllTasks, String> {
+    let (tasks, use_sections, sections, focused_section) = get_all_tasks(content_getter)?;
+    Ok((
+        filter_open_tasks(&tasks, true),
+        use_sections,
+        sections,
+        focused_section,
+    ))
 }
 
-pub fn get_closed_tasks(
-    content_getter: &dyn ContentGetter,
-) -> Result<AllTasks, String> {
-    match get_all_tasks(content_getter) {
-        Ok((tasks, use_sections, sections, focused_section)) => Ok((
-            filter_open_tasks(&tasks, false),
-            use_sections,
-            sections,
-            focused_section,
-        )),
-        Err(msg) => Err(msg),
-    }
+pub fn get_closed_tasks(content_getter: &dyn ContentGetter) -> Result<AllTasks, String> {
+    let (tasks, use_sections, sections, focused_section) = get_all_tasks(content_getter)?;
+    Ok((
+        filter_open_tasks(&tasks, false),
+        use_sections,
+        sections,
+        focused_section,
+    ))
 }
 
 pub fn filter_open_tasks(tasks: &[Task], open: bool) -> Vec<Task> {
     tasks
         .iter()
-        .filter(|t| filter_open_task_cbk(t, open)).cloned()
+        .filter(|t| filter_open_task_cbk(t, open))
+        .cloned()
         .collect()
 }
 
 pub fn filter_focused_tasks(tasks: &[Task], focused: bool) -> Vec<Task> {
     tasks
         .iter()
-        .filter(|t| filter_focused_task_cbk(t, focused)).cloned()
+        .filter(|t| filter_focused_task_cbk(t, focused))
+        .cloned()
         .collect()
 }
 
 pub fn filter_tasks_in_section(tasks: &[Task], section: &Section) -> Vec<Task> {
     tasks
         .iter()
-        .filter(|t| filter_task_in_section_cbk(t, section)).cloned()
+        .filter(|t| filter_task_in_section_cbk(t, section))
+        .cloned()
         .collect()
 }
 
@@ -271,8 +254,8 @@ pub fn task_to_markdown(task: &Task) -> String {
         } else {
             task.plain_name.clone()
         },
-        if task.comment != None {
-            format!(" // {}", task.comment.clone().unwrap())
+        if let Some(ref comment) = task.comment {
+            format!(" // {}", comment)
         } else {
             String::from("")
         }
@@ -301,17 +284,13 @@ pub fn text_get_comment(task_name: &str) -> (String, Option<String>) {
 pub fn text_remove_lines_in_str(s: &str, line_nums: Vec<usize>) -> Result<String, String> {
     let mut line_num = 1;
 
-    let mut content = String::from("");
+    let mut content = String::new();
 
-    use std::collections::HashMap;
-    let mut line_nums_hash = HashMap::new();
-
-    for l in &line_nums {
-        line_nums_hash.insert(*l, true);
-    }
+    use std::collections::HashSet;
+    let line_nums_set: HashSet<usize> = line_nums.into_iter().collect();
 
     for line in s.lines() {
-        if !line_nums_hash.contains_key(&line_num) {
+        if !line_nums_set.contains(&line_num) {
             content += format!("{}\n", line).as_str();
         }
 
@@ -328,7 +307,7 @@ pub fn text_replace_line_in_str(
 ) -> String {
     let mut line_num = 1;
 
-    let mut content = String::from("");
+    let mut content = String::new();
 
     for line in s.lines() {
         if line_num == replace_line_num {
@@ -346,7 +325,7 @@ pub fn text_replace_line_in_str(
 pub fn text_add_line_in_str(s: &str, add_line_num: usize, added_line: &str) -> String {
     let mut line_num = 1;
 
-    let mut content = String::from("");
+    let mut content = String::new();
 
     let mut added = false;
 
@@ -396,7 +375,7 @@ pub fn search_section(search: &str, sections: &[Rc<Section>]) -> Option<Section>
 mod tests {
 
     use super::*;
-    use crate::test_helpers::test::{get_std_test_contents, get_std_test_tasks, ContentGetterMock};
+    use crate::test_helpers::test::{ContentGetterMock, get_std_test_contents, get_std_test_tasks};
 
     #[test]
     fn test_task_to_markdown() {
@@ -477,7 +456,6 @@ mod tests {
 
     #[test]
     fn test_text_add_line_in_contents() {
-
         let s = text_add_line_in_str("", 1, "Hello, World!");
         assert_eq!(s, "Hello, World!\n");
 

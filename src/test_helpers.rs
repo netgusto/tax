@@ -119,7 +119,7 @@ pub mod test {
     #[allow(dead_code)]
     pub fn get_std_test_contents() -> (String, Vec<crate::model::Task>) {
         (
-            vec![
+            [
                 String::from("Not a task"),
                 String::from("- [ ] Standard unchecked"),
                 String::from("- [ ] **Standard unchecked focused**"),
@@ -203,7 +203,7 @@ pub mod test {
     #[allow(dead_code)]
     pub fn get_std_test_tasks() -> (String, Vec<crate::model::Task>) {
         (
-            vec![
+            [
                 String::from("- [ ] Standard unchecked"),
                 String::from("- [ ] **Standard unchecked focused**"),
                 String::from("- [x] Checked"),

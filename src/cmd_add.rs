@@ -13,6 +13,7 @@ pub enum AddPosition {
     Prepend,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn cmd(
     outputer: &mut dyn StringOutputer,
     content_getter: &dyn ContentGetter,
@@ -128,16 +129,14 @@ pub fn cmd(
         new_task.num = task_num;
     }
 
-    if let Err(e) = call_user_cmd_runner(
+    call_user_cmd_runner(
         user_cmd_runner,
         match pos {
             AddPosition::Prepend => "PREPEND",
             AddPosition::Append => "APPEND",
         },
         &new_task,
-    ) {
-        return Err(e)
-    }
+    )?;
 
     cmd_list::cmd(outputer, content_getter, task_formatter, display_all) // FIXME: all or not depending of whether the task is in displayed section
 }
@@ -166,10 +165,7 @@ fn add_to_section(
     // Add task to section
     let section_tasks = filter_tasks_in_section(tasks, section);
 
-    let content = match content_getter.get_contents() {
-        Err(e) => return Err(e),
-        Ok(content) => content,
-    };
+    let content = content_getter.get_contents()?;
 
     let line_num: usize;
     let task_num: usize;
@@ -325,7 +321,7 @@ mod tests {
     #[test]
     fn test_cmd_add_top_section() {
         let mut string_outputer = StringOutputerMock::new();
-        let content_getter = ContentGetterMock::new(Ok(vec![
+        let content_getter = ContentGetterMock::new(Ok([
             "# Section".to_string(),
             "".to_string(),
             "- [ ] Existing task".to_string(),
@@ -358,7 +354,7 @@ mod tests {
     #[test]
     fn test_cmd_add_bottom_section() {
         let mut string_outputer = StringOutputerMock::new();
-        let content_getter = ContentGetterMock::new(Ok(vec![
+        let content_getter = ContentGetterMock::new(Ok([
             "# Section".to_string(),
             "".to_string(),
             "- [ ] Existing task".to_string(),
