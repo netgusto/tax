@@ -267,11 +267,11 @@ pub fn text_add_focus(name: &str) -> String {
 }
 
 pub fn text_remove_focus(name: &str) -> String {
-    name.chars().take(name.len() - 2).skip(2).collect()
+    name.chars().take(name.chars().count() - 2).skip(2).collect()
 }
 
 pub fn text_is_focused(task_name: &str) -> bool {
-    task_name.len() > 4 && TASK_NAME_FOCUSED_REGEX.is_match(task_name)
+    task_name.chars().count() > 4 && TASK_NAME_FOCUSED_REGEX.is_match(task_name)
 }
 
 pub fn text_get_comment(task_name: &str) -> (String, Option<String>) {
